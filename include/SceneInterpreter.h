@@ -16,10 +16,6 @@
 
 
 using namespace std;
-namespace o3d_tensor =  open3d::t::geometry ;
-namespace o3d_legacy = open3d::geometry;
-namespace o3d_core = open3d::core;
-namespace o3d_vis = open3d::visualization;
 
 static bool activeWhile = true;
 
@@ -112,7 +108,7 @@ namespace iswy { // i see with you
 
 
     struct ObjectDetectParam{
-        string rootDir = "/home/jbs/catkin_ws/src/zed-open3d/param/";
+        string rootDir = "/home/jbs/lib/see_with_you/param/";
         string modelConfig = rootDir + "yolov4.cfg";
         string modelWeight = rootDir + "yolov4.weights";
         string classNameDir = rootDir + "coco.names";
@@ -157,13 +153,6 @@ namespace iswy { // i see with you
         void drawMe (cv::Mat& image, CameraParam camParam); // todo extrinsic
     };
 
-
-    struct VisOpen3d{
-
-        shared_ptr<o3d_legacy::TriangleMesh> attentionPointSet[4]; // left eye, right eye, left wrist, right wrist
-        shared_ptr<o3d_legacy::TriangleMesh> gazeCoordinate;
-    };
-
     struct VisOpenCv{
         cv::Mat image;
         vector<DetectedObject> curObjVis; // renewed from update thread
@@ -183,9 +172,9 @@ namespace iswy { // i see with you
 
     class SceneInterpreter {
     private:
+        bool isGrab = false;
         mutex mutex_; // mutex between cameraThread and vis thread
         // visualizers
-        VisOpen3d visOpen3d;
         VisOpenCv visOpenCv;
         VisParam paramVis;
 

@@ -2,7 +2,6 @@
 // Created by jbs on 21. 9. 5..
 //
 #include <ZedUtils.h>
-#include <Open3dUtils.h>
 
 #include <string>
 using namespace std;
@@ -126,14 +125,6 @@ cv::cuda::GpuMat zed_utils::slMat2cvMatGPU(sl::Mat& input) {
                             input.getPtr<sl::uchar1>(sl::MEM::GPU), input.getStepBytes(sl::MEM::GPU));
 }
 
-open3d::geometry::RGBDImage createFromZedImage(const cv::Mat& image, const cv::Mat& depth){
-    open3d::geometry::Image imageO3d, depthO3d;
-    imageO3d.Prepare(image.cols, image.rows, 3, 1);
-    depthO3d.Prepare(depth.cols, depth.rows, 1, 4);
-    memcpy(imageO3d.data_.data(), image.data, imageO3d.data_.size());
-    memcpy(depthO3d.data_.data(), depth.data, depthO3d.data_.size());
-    return *open3d::geometry::RGBDImage::CreateFromColorAndDepth(imageO3d, depthO3d);
-}
 
 Gaze::Gaze(const sl::ObjectData &humanObject) {
     // todo transformation was not considered

@@ -2,14 +2,16 @@
 #define ZED_OPEN3D_ZEDUTILS_H
 
 #include <sl/Camera.hpp>
-#include <Open3dUtils.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/cvconfig.h>
 #include "opencv2/cudaimgproc.hpp"
 #include <opencv2/cudawarping.hpp>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+#include <tuple>
 
-
+using namespace std;
 
 namespace zed_utils {
     using namespace sl;
@@ -39,8 +41,6 @@ namespace zed_utils {
     cv::cuda::GpuMat slMat2cvMatGPU(sl::Mat &input); // currently, not working
 
     int getOCVtype(sl::MAT_TYPE type);
-
-    open3d::geometry::RGBDImage createFromCvImage(const cv::Mat &image, const cv::Mat &depth);
 
     void print(string msg_prefix, ERROR_CODE err_code, string msg_suffix);
 

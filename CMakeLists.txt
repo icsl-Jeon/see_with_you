@@ -4,7 +4,7 @@ set(CMAKE_BUILD_TYPE debug)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 message("${CMAKE_MODULE_PATH}")
-
+find_package (Eigen3 REQUIRED NO_MODULE)
 
 
 find_package(ZED 3 REQUIRED)
