@@ -226,6 +226,9 @@ namespace iswy{
                     if (obj.classLabel == paramAttention.ooi)
                         attention.evalAttentionCost(obj, paramAttention);
             }
+
+            // visualization
+            visualize();
             if (not isGrab)
                 isGrab = true;
         }

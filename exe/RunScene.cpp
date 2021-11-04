@@ -8,9 +8,9 @@ int main() {
 
     SceneInterpreter sceneInterpreter;
     thread camThread(&SceneInterpreter::cameraThread,&sceneInterpreter);
-    thread visThread(&SceneInterpreter::visThread,&sceneInterpreter);
+//    thread visThread(&SceneInterpreter::visThread,&sceneInterpreter);
     camThread.join();
-    visThread.join();
+//    visThread.join();
 
     return 0;
 }
