@@ -125,7 +125,6 @@ namespace iswy{
         camera.retrieveObjects(humans,runParam.getObjRtParam());
         if (not humans.object_list.empty())
             actor = humans.object_list[0];
-
         return isOk;
     }
 
@@ -204,9 +203,6 @@ namespace iswy{
                 zedState.grab(zedParam);
                 cv::cuda::cvtColor(deviceData.imageCv, deviceData.imageCv3ch, cv::COLOR_BGRA2BGR);
                 zedState.markHumanPixels(deviceData.fgMask);
-
-                cv::Mat imgg;
-                deviceData.imageCv.download(imgg);
             }
 
             // compute human attention
@@ -230,10 +226,10 @@ namespace iswy{
                     if (obj.classLabel == paramAttention.ooi)
                         attention.evalAttentionCost(obj, paramAttention);
             }
-            isGrab = true;
-
+            if (not isGrab)
+                isGrab = true;
         }
-        printf("terminating camera thread. \n");
+        printf("INFO: terminating camera thread. \n");
     }
 
     float AttentionEvaluator::evalAttentionCost(DetectedObject &object, AttentionParam param, bool updateObject) {
@@ -241,6 +237,7 @@ namespace iswy{
         float distToLeftHand = (leftHand - object.centerPoint.cast<float>()).norm();
         float distToRightHand = (rightHand - object.centerPoint.cast<float>()).norm();
         float cost = param.gazeImportance* angleFromGaze + (distToRightHand + distToLeftHand);
+
         if(updateObject)
             object.updateAttentionCost(cost);
         return  cost;
@@ -425,7 +422,7 @@ namespace iswy{
 
         // update 3D position by averaging the masked region (todo kernel)
         float xCur,yCur,zCur;
-        float xCenter,yCenter,zCenter;
+        float xCenter = 0,yCenter = 0,zCenter = 0;
         int cnt = 0;
         int R = mask_cpu.size().height, C = mask_cpu.size().width;
         for (int r= 0 ; r < R ; r++)
@@ -494,9 +491,9 @@ namespace iswy{
     }
 
     void SceneInterpreter::forwardToVisThread() {
-        deviceData.imageCv3ch.download(visOpenCv.image);
-        if (not detectedObjects.empty())
-            visOpenCv.curObjVis = detectedObjects;
+            deviceData.imageCv3ch.download(visOpenCv.image);
+            if (not detectedObjects.empty())
+                visOpenCv.curObjVis = detectedObjects;
 
     }
 
@@ -539,22 +536,45 @@ namespace iswy{
     }
 
 
+    void SceneInterpreter::visualize() {
+        if (not imshowWindowOpened){
+            cv::namedWindow(paramVis.nameImageWindow, cv::WINDOW_KEEPRATIO);
+            cv::resizeWindow(paramVis.nameImageWindow, zedParam.getCvSize());
+            imshowWindowOpened = true;
+        }
+        if (isGrab) {
+            forwardToVisThread();
+            // human
+            attention.drawMe(visOpenCv.image, zedParam);
+
+            //  object cost w.r.t human attention
+            std::sort(visOpenCv.curObjVis.begin(),
+                      visOpenCv.curObjVis.end(),
+                      [](DetectedObject &attentionLhs, DetectedObject &attentionRhs) {
+                          return attentionLhs.attentionCost < attentionRhs.attentionCost;
+                      }
+            );
+
+            drawAttentionScores(visOpenCv.image, visOpenCv.curObjVis);
+            cv::imshow(paramVis.nameImageWindow, visOpenCv.image);
+            cv::waitKey(1);
+        }
+    }
+
     void SceneInterpreter::visThread() {
 
         // vis - opencv init
-        cv::namedWindow(paramVis.nameImageWindow, cv::WINDOW_KEEPRATIO);
-        cv::resizeWindow(paramVis.nameImageWindow, 600, 400);
+        cv::namedWindow(paramVis.nameImageWindow, cv::WINDOW_KEEPRATIO );
+        cv::resizeWindow(paramVis.nameImageWindow, zedParam.getCvSize());
 
         while(activeWhile ) {
             if (isGrab) {
                 forwardToVisThread();
-
                 if (not visOpenCv.image.empty()) {
-                    // object: this is used when confidence monitoring is requried
+                    // object: this is used when confidence monitoring is required
 //                for (const auto& obj: visOpenCv.curObjVis )
 //                    if (obj.classLabel == paramAttention.ooi)
 //                        obj.drawMe(visOpenCv.image);
-
                     // human
                     attention.drawMe(visOpenCv.image, zedParam);
 
@@ -568,14 +588,17 @@ namespace iswy{
 
                     drawAttentionScores(visOpenCv.image, visOpenCv.curObjVis);
 
-
                     cv::imshow(paramVis.nameImageWindow, visOpenCv.image);
                     cv::waitKey(1);
-                }else{
-                    cout << "visImage empty..." << endl;
-                }
+                } else
+                    printf("WARN: visImage empty...\n") ;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
+
+        printf("INFO: terminating vis thread.\n") ;
+
+
     }
 
 

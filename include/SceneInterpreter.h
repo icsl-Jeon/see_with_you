@@ -173,6 +173,7 @@ namespace iswy { // i see with you
     class SceneInterpreter {
     private:
         bool isGrab = false;
+        bool imshowWindowOpened = false;
         mutex mutex_; // mutex between cameraThread and vis thread
         // visualizers
         VisOpenCv visOpenCv;
@@ -198,6 +199,7 @@ namespace iswy { // i see with you
 
         void bindDevice();
         void forwardToVisThread();
+        void visualize();
 
 
 
