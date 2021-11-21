@@ -179,11 +179,11 @@ Eigen::Matrix4f Gaze::getTransformation() const {
 
 
 bool Gaze::isValid()  const {
-    return not (isinf(transformation.norm()) or isnan(transformation.norm())) ;
+    return !(isinf(transformation.norm()) || isnan(transformation.norm())) ;
 }
 
 float Gaze::measureAngleToPoint(const Eigen::Vector3f &point) const {
-    if (not this->isValid()){
+    if (! this->isValid()){
         printf("[Gaze] gaze is not valid. But angle-measure requested. Returning inf\n");
         return INFINITY;
     }

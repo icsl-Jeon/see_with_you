@@ -31,12 +31,10 @@ namespace iswy{
      * Initialize the zed params from yaml file
      * @param paramterFilePath
      */
-    CameraParam::CameraParam(string paramterFilePath) {
+    CameraParam::CameraParam(string paramterFilePath, string svoFileDir) {
         // todo
-//        string svoFileDir = "/home/jbs/Documents/ZED/attention_coke.svo";
-        string svoFileDir;
 
-        if (not svoFileDir.empty())
+        if (! svoFileDir.empty())
             initParameters.input.setFromSVOFile(svoFileDir.c_str());
         else
             initParameters.camera_resolution = sl::RESOLUTION::HD720;
@@ -54,6 +52,17 @@ namespace iswy{
         detectionParameters.enable_mask_output = true;
 
         runtimeParameters.confidence_threshold = 50;
+    }
+
+    Eigen::Matrix3f CameraParam::getCameraMatrix() const {
+        Eigen::Matrix3f camMat;
+        camMat.setIdentity();
+        camMat(0,0) = fx;
+        camMat(1,1) = fy;
+        camMat(0,2) = cx;
+        camMat(1,2) = cy;
+
+        return camMat;
     }
 
 
@@ -123,7 +132,7 @@ namespace iswy{
         camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::GPU);
         camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::GPU);
         camera.retrieveObjects(humans,runParam.getObjRtParam());
-        if (not humans.object_list.empty())
+        if (! humans.object_list.empty())
             actor = humans.object_list[0];
         return isOk;
     }
@@ -152,7 +161,7 @@ namespace iswy{
      * Bind memory in gpu (device)
      */
     void SceneInterpreter::bindDevice() {
-        if (not (zedState.camera.isOpened() and (zedState.image.getWidth() > 0) and  (zedState.image.getHeight() > 0) ))
+        if (! (zedState.camera.isOpened() && (zedState.image.getWidth() > 0) &&  (zedState.image.getHeight() > 0) ))
             throw error::ZedException("Initialize zed camera first, then bind!");
         // zed - opencv gpu
         deviceData.depthCv = zed_utils::slMat2cvMatGPU(zedState.depth); // bound buffer
@@ -162,7 +171,7 @@ namespace iswy{
         // opencv gpu - open3d
     }
 
-    SceneInterpreter::SceneInterpreter() : zedParam(""){
+    SceneInterpreter::SceneInterpreter() : zedParam("",""){
 
         // zed init
         zedParam.open(zedState);
@@ -219,7 +228,7 @@ namespace iswy{
             // yolo obj detectors
             detect();
 
-            // evalute attention for each object
+            // evaluate attention for each object
             {
                 ElapseMonitor elapseAttention("attention");
                 for (auto &obj: detectedObjects)
@@ -229,7 +238,7 @@ namespace iswy{
 
             // visualization
             visualize();
-            if (not isGrab)
+            if (! isGrab)
                 isGrab = true;
         }
         printf("INFO: terminating camera thread. \n");
@@ -495,7 +504,7 @@ namespace iswy{
 
     void SceneInterpreter::forwardToVisThread() {
             deviceData.imageCv3ch.download(visOpenCv.image);
-            if (not detectedObjects.empty())
+            if (! detectedObjects.empty())
                 visOpenCv.curObjVis = detectedObjects;
 
     }
@@ -510,7 +519,7 @@ namespace iswy{
             cv::Scalar color;
             float cost = objs[nn].attentionCost;
             bool isAttentionCalculated =  cost != INFINITY;
-            if (not isAttentionCalculated) {
+            if (! isAttentionCalculated) {
                 color = cv::Scalar(10, 10, 10);
             } else {
                 int colorIdx = min(nn, 3);
@@ -540,7 +549,7 @@ namespace iswy{
 
 
     void SceneInterpreter::visualize() {
-        if (not imshowWindowOpened){
+        if (! imshowWindowOpened){
             cv::namedWindow(paramVis.nameImageWindow, cv::WINDOW_KEEPRATIO);
             cv::resizeWindow(paramVis.nameImageWindow, zedParam.getCvSize());
             imshowWindowOpened = true;
@@ -573,7 +582,7 @@ namespace iswy{
         while(activeWhile ) {
             if (isGrab) {
                 forwardToVisThread();
-                if (not visOpenCv.image.empty()) {
+                if (! visOpenCv.image.empty()) {
                     // object: this is used when confidence monitoring is required
 //                for (const auto& obj: visOpenCv.curObjVis )
 //                    if (obj.classLabel == paramAttention.ooi)

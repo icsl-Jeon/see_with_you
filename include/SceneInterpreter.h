@@ -84,7 +84,7 @@ namespace iswy { // i see with you
         sl::ObjectDetectionRuntimeParameters objectDetectionRuntimeParameters;
 
     public:
-        CameraParam(string paramterFilePath);
+        CameraParam(string paramterFilePath,string svoFileDir);
         bool open(ZedState& zed);
         sl::RuntimeParameters getRtParam() const {return runtimeParameters;};
         sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return objectDetectionRuntimeParameters;}
@@ -96,6 +96,7 @@ namespace iswy { // i see with you
             xOut = (uv.x - cx) * depth / fx;
             yOut = (uv.y - cy) * depth / fy;
         };
+        Eigen::Matrix3f getCameraMatrix() const ;
 
     };
 
@@ -149,7 +150,7 @@ namespace iswy { // i see with you
         Eigen::Vector3f leftHand; // left hand location
         Eigen::Vector3f rightHand; // right hand location
         float evalAttentionCost(DetectedObject& object, AttentionParam param, bool updateObject = true);
-        bool isValid() {return (not isnan(leftHand.norm()) and (not isnan(leftHand.norm())) and gaze.isValid()); }
+        bool isValid() {return (! isnan(leftHand.norm()) && (! isnan(leftHand.norm())) && gaze.isValid()); }
         void drawMe (cv::Mat& image, CameraParam camParam); // todo extrinsic
     };
 

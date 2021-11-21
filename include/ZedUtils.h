@@ -1,6 +1,10 @@
 #ifndef ZED_OPEN3D_ZEDUTILS_H
 #define ZED_OPEN3D_ZEDUTILS_H
 
+#ifdef _WIN32
+#define _USE_MATH_DEFINES
+#endif
+
 #include <sl/Camera.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
