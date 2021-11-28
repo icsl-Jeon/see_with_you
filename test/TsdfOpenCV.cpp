@@ -38,8 +38,8 @@ int main(){
 
     // Opencv Tsdf
 //    cv::setUseOptimized( true );
-    cv::Ptr<cv::kinfu::Params> params;
-    params = cv::kinfu::Params::defaultParams();
+    cv::Ptr<cv::colored_kinfu::Params> params;
+    params = cv::colored_kinfu::Params::coloredTSDFParams(true);
     params->frameSize = zedParam.getCvSize();
 
     Eigen::Matrix3f intrinsic = zedParam.getCameraMatrix();
@@ -48,9 +48,8 @@ int main(){
             params->intr(r,c) = intrinsic(r,c);
     params->depthFactor = 1.0;
 
-    cv::Ptr<cv::kinfu::KinFu> kinfu
-        = cv::kinfu::KinFu::create(params);
-
+    cv::Ptr<cv::colored_kinfu::ColoredKinFu> kinfu
+        = cv::colored_kinfu::ColoredKinFu::create(params);
 
     cv::UMat uImage;
     cv::UMat uDepth;     // Camera thread
@@ -74,8 +73,7 @@ int main(){
         // tsdf
         {
             ElapseMonitor monitor("Kinfu Update");
-
-            if ( ! kinfu->update(uDepth))
+            if ( ! kinfu->update(uDepth,uImage))
                 kinfu->reset();
         }
 

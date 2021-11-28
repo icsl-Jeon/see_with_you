@@ -9,10 +9,10 @@
 
 
 #include <ZedUtils.h>
+#include <Open3dUtils.h>
 #include <Misc.h>
 #include <mutex>
 #include "opencv2/cudaarithm.hpp"
-
 
 
 using namespace std;
@@ -65,7 +65,6 @@ namespace iswy { // i see with you
 
         bool grab(const CameraParam & runParam);
         bool markHumanPixels (cv::cuda::GpuMat& maskMat);
-
     };
 
     struct CameraParam{
@@ -96,7 +95,9 @@ namespace iswy { // i see with you
             xOut = (uv.x - cx) * depth / fx;
             yOut = (uv.y - cy) * depth / fy;
         };
-        Eigen::Matrix3f getCameraMatrix() const ;
+        Eigen::Matrix3d getCameraMatrix() const ;
+        open3d::core::Tensor getO3dIntrinsicTensor(
+                open3d::core::Device dType = open3d::core::Device("CUDA:0")) const;
 
     };
 

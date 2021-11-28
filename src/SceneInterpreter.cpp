@@ -54,8 +54,8 @@ namespace iswy{
         runtimeParameters.confidence_threshold = 50;
     }
 
-    Eigen::Matrix3f CameraParam::getCameraMatrix() const {
-        Eigen::Matrix3f camMat;
+    Eigen::Matrix3d CameraParam::getCameraMatrix() const {
+        Eigen::Matrix3d camMat;
         camMat.setIdentity();
         camMat(0,0) = fx;
         camMat(1,1) = fy;
@@ -113,7 +113,7 @@ namespace iswy{
 
     bool ZedState::grab(const CameraParam& runParam) {
 
-        ElapseMonitor monitor("ZedGrab");
+        ElapseMonitor monitor("Grab {rgb,depth,object}");
 
         bool isOk;
         auto rtParam = runParam.getRtParam();
@@ -609,10 +609,14 @@ namespace iswy{
         }
 
         printf("INFO: terminating vis thread.\n") ;
-
-
     }
 
+    open3d::core::Tensor CameraParam::getO3dIntrinsicTensor(open3d::core::Device dType) const {
+        open3d::core::Tensor intrinsic = open3d::core::eigen_converter::EigenMatrixToTensor(
+                getCameraMatrix());
+        intrinsic.To(dType);
+        return intrinsic;
+    }
 
 
 }
