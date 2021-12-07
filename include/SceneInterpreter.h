@@ -77,16 +77,16 @@ namespace iswy { // i see with you
         float cy;
         int width;
         int height;
-        sl::InitParameters initParameters;
-        sl::ObjectDetectionParameters detectionParameters;
-        sl::RuntimeParameters runtimeParameters;
-        sl::ObjectDetectionRuntimeParameters objectDetectionRuntimeParameters;
+        sl::InitParameters* initParameters;
+        sl::ObjectDetectionParameters* detectionParameters;
+        sl::RuntimeParameters* runtimeParameters;
+        sl::ObjectDetectionRuntimeParameters* objectDetectionRuntimeParameters;
 
     public:
         CameraParam(string paramterFilePath,string svoFileDir);
         bool open(ZedState& zed);
-        sl::RuntimeParameters getRtParam() const {return runtimeParameters;};
-        sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return objectDetectionRuntimeParameters;}
+        sl::RuntimeParameters getRtParam() const {return *runtimeParameters;};
+        sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return *objectDetectionRuntimeParameters;}
         cv::Size getCvSize() const {return cv::Size(width,height);};
         cv::Point2f project(const Eigen::Vector3f& pnt) const{
             return {fx*pnt.x()/pnt.z() + cx, fx*pnt.y()/pnt.z() + cy};};

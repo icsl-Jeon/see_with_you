@@ -16,7 +16,8 @@
 #include <string>
 #include <sstream>
 #include <signal.h>
-
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/cudaimgproc.hpp"
 
@@ -106,10 +107,25 @@ namespace misc {
     void drawPred(string className, float conf,  float x, float y, float z,
                   int left, int top, int right, int bottom, cv::Mat &frame) ;
 
+    struct Pose{
+        Eigen::Transform<float,3,Eigen::Affine> poseMat;
 
 
+    };
 
+    struct PoseSet{
+    public:
+        std::vector<Pose> poseSet;
+        std::string name = "PoseSet";
+        PoseSet() = default;
+        PoseSet(int N) {poseSet = std::vector<Pose>(N);};
 
+        void push_back(const Pose& pose){poseSet.emplace_back(pose);}
+        void set(unsigned int idx,const Pose& pose ) {poseSet[idx] = pose; }
+        Pose get(unsigned int idx) const {return poseSet[idx];}
+        unsigned int size() const {return poseSet.size();}
+
+    };
 
 
 }

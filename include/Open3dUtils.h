@@ -9,11 +9,11 @@
 #include <open3d/t/geometry/RaycastingScene.h>
 #include <open3d/core/MemoryManager.h>
 #include <opencv2/opencv.hpp>
-#include <sl/Camera.hpp>
-using namespace std;
-using namespace sl;
-namespace o3d_utils {
+#include <sl/Camera.hpp> // This should not be double included ..?
 
+using namespace std;
+namespace o3d_utils {
+    using namespace sl;
     const std::vector<std::pair< BODY_PARTS, BODY_PARTS>> SKELETON_BONES
             {
                     {

@@ -21,9 +21,11 @@ namespace o3d_vis = open3d::visualization;
 int main(){
 
     // Initialize ZED
-    string svoFileDir = "C:\\Users\\junbs\\OneDrive\\Documents\\ZED\\HD1080_SN28007858_14-25-48.svo";
-    CameraParam zedParam(" ",svoFileDir);
+    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+//    string svoFileDir = "C:\\Users\\JBS\\OneDrive\\Documents\\ZED\\HD1080_SN28007858_14-25-48.svo";
+//    string svoFileDir = "";
     ZedState zedState;
+    CameraParam zedParam("",svoFileDir);
     zedParam.open(zedState);
 
     if (zedState.camera.isOpened()){
@@ -138,6 +140,8 @@ int main(){
 
         auto blockCoord = volumePtr->GetUniqueBlockCoordinates(depthO3d_cpu,intrinsic,extrinsicO3dTensor,1,5);
         blockCoord = blockCoord.To(device_cpu);
+
+
 //        ElapseMonitor monitor("TSDF integration + register mesh"); // in Release, 2ms
         volumePtr->Integrate(blockCoord,depthO3d_cpu,imageO3d_cpu,intrinsic,extrinsicO3dTensor,1,5);
 

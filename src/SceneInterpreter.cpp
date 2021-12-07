@@ -33,25 +33,29 @@ namespace iswy{
      */
     CameraParam::CameraParam(string paramterFilePath, string svoFileDir) {
         // todo
+        initParameters = new sl::InitParameters;
+        detectionParameters = new sl::ObjectDetectionParameters;
+        runtimeParameters = new sl::RuntimeParameters;
+        objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
 
         if (! svoFileDir.empty())
-            initParameters.input.setFromSVOFile(svoFileDir.c_str());
+            initParameters->input.setFromSVOFile(svoFileDir.c_str());
         else
-            initParameters.camera_resolution = sl::RESOLUTION::HD720;
+            initParameters->camera_resolution = sl::RESOLUTION::HD720;
         isSvo = true;
 
-        initParameters.coordinate_units = sl::UNIT::METER;
+        initParameters->coordinate_units = sl::UNIT::METER;
 //    initParameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
-        initParameters.depth_mode = sl::DEPTH_MODE::ULTRA;
-        initParameters.depth_maximum_distance = 7.0;
-        initParameters.depth_minimum_distance = 0.1;
+        initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
+        initParameters->depth_maximum_distance = 7.0;
+        initParameters->depth_minimum_distance = 0.1;
 
-        detectionParameters.detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
-        detectionParameters.enable_tracking = true;
-        detectionParameters.enable_body_fitting = true;
-        detectionParameters.enable_mask_output = true;
+        detectionParameters->detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
+        detectionParameters->enable_tracking = true;
+        detectionParameters->enable_body_fitting = true;
+        detectionParameters->enable_mask_output = true;
 
-        runtimeParameters.confidence_threshold = 50;
+        runtimeParameters->confidence_threshold = 50;
     }
 
     Eigen::Matrix3d CameraParam::getCameraMatrix() const {
@@ -76,7 +80,7 @@ namespace iswy{
     bool CameraParam::open(ZedState& zed) {
 
         // open camera
-        auto returned_state = zed.camera.open(initParameters);
+        auto returned_state = zed.camera.open(*initParameters);
         if (returned_state != sl::ERROR_CODE::SUCCESS) {
             printf("Enabling positional tracking failed: \n");
             return false;

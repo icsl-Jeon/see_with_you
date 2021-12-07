@@ -3,21 +3,31 @@ PROJECT(SEE_WITH_YOU)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 message("${CMAKE_MODULE_PATH}")
+
+
+# In case WIN32,
+# we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
+IF (${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    set(OPEN3D_BUILD_DIR "C:/Users/JBS/OneDrive/Documents/window_dev/Open3D_built/Release")
+ELSEIF(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    set(OPEN3D_BUILD_DIR "C:/Users/JBS/OneDrive/Documents/window_dev/Open3D_built/RelWithDebInfo")
+ELSE()
+    set(OPEN3D_BUILD_DIR "C:/Users/JBS/OneDrive/Documents/window_dev/Open3D_built/Debug")
+ENDIF()
+include("${OPEN3D_BUILD_DIR}/CMake/Open3DConfig.cmake")
+link_directories("${OPEN3D_BUILD_DIR}/lib")
+
 IF (WIN32)
     # To include eigen in window, set env variables
     # EIGEN3_INCLUDE_DIR = C:\Program Files (x86)\Eigen3\include after installing.
     # You might have to restart the IDE after setting env
     INCLUDE_DIRECTORIES ( "$ENV{EIGEN3_INCLUDE_DIR}" )
-    # TBB library add. Still IDK why should I manually do this linking on my own.
-    # TBB_DIR = <path/to/open3d>\Open3D\build\tbb\src\ext_tbb-build\Release
-    link_directories("$ENV{TBB_DIR}")
 ELSE()
     find_package(Eigen3 REQUIRED NO_MODULE)
 ENDIF()
 
-message($ENV{TBB_DIR})
-
-# OpenGL
+# GLM
+find_package(glm REQUIRED)
 
 # ZED
 find_package(ZED 3 REQUIRED)
@@ -61,11 +71,11 @@ target_link_libraries(RunScene PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUD
 add_executable(RunVtkTsdf test/TsdfOpenCV.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp )
 target_link_libraries(RunVtkTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
 
-add_executable(RunOpen3dOpengl test/TsdfOpen3dOpengl.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
-target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D tbb_static )
+add_executable(RunOpen3dOpengl test/TsdfOpen3dOpengl.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
+target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )
 
 add_executable(RunOpen3DTsdf test/TsdfOpen3d.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
-target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D tbb_static )
+target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} )
 
 
 if(WIN32)

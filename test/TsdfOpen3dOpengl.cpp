@@ -2,13 +2,11 @@
 // Created by junbs on 11/21/2021.
 //
 
-#include <ZedUtils.h>
-#include <Misc.h>
 #include <SceneInterpreter.h>
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/rgbd.hpp"
-#include <Open3dUtils.h>
 
+#include <RenderUtils.h> // IDK for sure, but this should be included after sl/Camera.hpp...
 
 using namespace iswy;
 
@@ -18,28 +16,18 @@ namespace o3d_core = open3d::core;
 namespace o3d_vis = open3d::visualization;
 
 
+
 int main(){
     // OPENGL
-    // Open3D links all opengl stuff (glew, glfw, opengl.... Check Open3D\include\open3d\3rdparty)
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // do not open window
-    GLFWwindow* window = glfwCreateWindow(1920,
-                                          1080,
-                                          "render", NULL, NULL);
-
-    if (window == NULL){
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return 0;
-    }
-    glfwMakeContextCurrent(window);
+    string shaderDir = "C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/include/shader";
+    render_utils::Param param;
+    param.shaderRootDir = shaderDir;
+    render_utils::SceneRenderServer glServer(param);
 
 
     // Initialize ZED
-    string svoFileDir = "C:\\Users\\junbs\\OneDrive\\Documents\\ZED\\HD1080_SN28007858_14-25-48.svo";
+    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+
     CameraParam zedParam(" ",svoFileDir);
     ZedState zedState;
     zedParam.open(zedState);
@@ -64,7 +52,6 @@ int main(){
     cv::Mat hostDepth;
 
     // Open3D image binding
-
     bool isVisInit = false;
 
     o3d_core::Device device_gpu("CUDA:0");
@@ -82,12 +69,6 @@ int main(){
     auto depthTensor = o3d_core::Tensor({row,col,1}, {col,1,1},
                                         depthBlob->GetDataPtr(),depthType,depthBlob);
     o3d_tensor::Image depthO3d(depthTensor);
-    /**
-     * The below test is whether I can use .To(cpu)...
-     */
-    o3d_tensor::Image render;
-
-
 
 
     // TSDF volume
@@ -103,8 +84,31 @@ int main(){
    shared_ptr<o3d_legacy::Image> renderImagePtr = make_shared<o3d_legacy::Image>();
    shared_ptr<o3d_legacy::TriangleMesh> meshPtr = make_shared<o3d_legacy::TriangleMesh>();
    o3d_tensor::TriangleMesh mesh;
+
+   // Open3d visualizer
    o3d_vis::Visualizer vis;
    vis.CreateVisualizerWindow("Render Image");
+
+    // candidate cam poses (moving along a slider and heading to target)
+    int nCam = 5;
+    misc::PoseSet camSet;
+    misc::Pose poseCam; // default optical coordinate (z-forwarding)
+    poseCam.poseMat.setIdentity();
+    Eigen::Matrix3f rot = Eigen::Matrix3f::Zero();
+    rot(1,0) = -1; rot(2,1) = -1; rot(0,2) = 1;
+    poseCam.poseMat.matrix().block(0,0,3,3) = rot;
+    float sliderLength = 4.0;
+    float targetFromOrig = 1.0;
+    for (int camIdx = 0; camIdx < nCam ; camIdx++){
+        float transl = -sliderLength/2 +  sliderLength / (nCam - 1) * camIdx;
+        float angleToTarget = -atan(sliderLength / targetFromOrig);
+        auto pose = poseCam;
+        pose.poseMat.translate(Eigen::Vector3f(-transl,0,0));
+        auto rev = Eigen::AngleAxisf (angleToTarget,Eigen::Vector3f(0,1,0));
+        pose.poseMat.rotate(rev);
+        camSet.push_back(pose);
+        cout << pose.poseMat.matrix() << endl; // for debugging
+    }
 
     while (true){
         zedState.grab(zedParam);
@@ -114,16 +118,18 @@ int main(){
         {
 
             ElapseMonitor monitor("TSDF integration + register mesh"); // in Release, 2ms
-            volumePtr->Integrate(depthO3d_cpu,imageO3d_cpu,intrinsic,extrinsicO3dTensor,1,5);
-
-
-             mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
+            volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,5);
+            mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
+            mesh = mesh.To(device_cpu);
+
         }
 
         *meshPtr = mesh.ToLegacy();
+        // draw current mesh
         if (meshPtr->HasTriangles()){
+
             if (! isVisInit){
                 vis.AddGeometry(meshPtr);
                 isVisInit = true;
