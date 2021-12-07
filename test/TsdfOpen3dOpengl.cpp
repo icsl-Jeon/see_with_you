@@ -124,6 +124,7 @@ int main(){
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
             mesh = mesh.To(device_cpu);
 
+
         }
 
         *meshPtr = mesh.ToLegacy();
