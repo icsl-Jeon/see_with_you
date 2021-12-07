@@ -117,12 +117,13 @@ int main(){
         // mesh rendering
         {
 
-            ElapseMonitor monitor("TSDF integration + register mesh"); // in Release, 2ms
+            ElapseMonitor monitor("TSDF integration + register mesh + rendering "); // in Release, 2ms
             volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,5);
             mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
             mesh = mesh.To(device_cpu);
+            auto renderResult = glServer.renderService(camSet,mesh);
 
 
         }
