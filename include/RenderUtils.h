@@ -47,12 +47,12 @@ namespace render_utils {
     struct Param {
         bool verbose;
         // tile size.
-        unsigned int imgWidth = 600;
-        unsigned int imgHeight = 400;
+        unsigned int imgWidth = 100;
+        unsigned int imgHeight = 100;
         // total composite image
         unsigned int displayWidth = 1920;
         unsigned int displayHeight = 1080;
-        float fovDeg; // degree
+        float fovDeg = 90.0f; // degree
         string shaderRootDir;
         double vertexProximityThreshold = 1e-10;
         int renderMeshQueue = 5000; //

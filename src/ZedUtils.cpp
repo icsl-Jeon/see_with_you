@@ -59,12 +59,13 @@ bool zed_utils::initCamera(sl::Camera &zed, sl::InitParameters initParameters) {
     initParameters.depth_maximum_distance = 7.0;
     initParameters.depth_minimum_distance = 0.1;
 
+    /**
     sl::ObjectDetectionParameters detectionParameters;
     detectionParameters.detection_model = sl::DETECTION_MODEL::HUMAN_BODY_MEDIUM;
     detectionParameters.enable_tracking = true;
     detectionParameters.enable_body_fitting = true;
     detectionParameters.enable_mask_output = true;
-
+    **/
 
     // Enabling functions
     auto returned_state = zed.open(initParameters);
@@ -72,7 +73,6 @@ bool zed_utils::initCamera(sl::Camera &zed, sl::InitParameters initParameters) {
         printf("Enabling positional tracking failed: \n");
         return false;
     }
-
     returned_state = zed.enablePositionalTracking();
     if(returned_state != sl::ERROR_CODE::SUCCESS) {
         printf("Enabling positional tracking failed: \n");
@@ -80,13 +80,14 @@ bool zed_utils::initCamera(sl::Camera &zed, sl::InitParameters initParameters) {
         return false;
     }
 
+    /**
     returned_state = zed.enableObjectDetection(detectionParameters);
     if(returned_state != sl::ERROR_CODE::SUCCESS) {
         printf("Enabling object detection failed: \n");
         zed.close();
         return false;
     }
-
+    **/
 
     return true;
 }

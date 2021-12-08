@@ -18,15 +18,17 @@ namespace o3d_vis = open3d::visualization;
 
 
 int main(){
+
     // OPENGL
-    string shaderDir = "C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/include/shader";
+    string shaderDir = "C:/Users/junbs/OneDrive/Documents/GitHub/see_with_you/include/shader";
     render_utils::Param param;
     param.shaderRootDir = shaderDir;
     render_utils::SceneRenderServer glServer(param);
+    render_utils::RenderResult renderResult;
 
 
     // Initialize ZED
-    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+    string svoFileDir = "C:/Users/junbs/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
 
     CameraParam zedParam(" ",svoFileDir);
     ZedState zedState;
@@ -110,6 +112,8 @@ int main(){
         cout << pose.poseMat.matrix() << endl; // for debugging
     }
 
+
+
     while (true){
         zedState.grab(zedParam);
         cv::cuda::cvtColor(deviceImage, deviceImage3ch, cv::COLOR_BGRA2RGB);
@@ -123,8 +127,8 @@ int main(){
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
             mesh = mesh.To(device_cpu);
-            auto renderResult = glServer.renderService(camSet,mesh);
-
+            if (! mesh.IsEmpty())
+                renderResult = glServer.renderService(camSet,mesh);
 
         }
 
