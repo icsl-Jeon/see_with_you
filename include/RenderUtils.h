@@ -22,7 +22,7 @@ namespace o3d_legacy = open3d::geometry;
 namespace o3d_core = open3d::core;
 namespace o3d_vis = open3d::visualization;
 
-const int nMaxTriangles = 10000;
+const int nMaxTriangles = 300000;
 
 
 namespace render_utils {
@@ -118,8 +118,8 @@ namespace render_utils {
         bool initShader(string shaderRootDir); //! vertex and fragment shader init
 
         //! Raw buffer used for opengl rendering. This should be built from mesh queue at meshQueueToVertexBuffer()
-        float vertexPtr [6 *nMaxTriangles]; // x,y,z,r,g,b
-        unsigned int indexPtr [3 * nMaxTriangles]; // v1,v2,v3
+        float* vertexPtr; // x,y,z,r,g,b
+        unsigned int* indexPtr; // v1,v2,v3
         int nVertex = 0; //! number of vertex (x,y,z,r,g,b). total data array to contain = 4*nVertex Opengl VBO uses this
         int nTriIndex = 0; //! number of vertex (v1,v2,v3). total data array to contain = 3*nTriIndex Opengl EBO uses this
 

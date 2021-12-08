@@ -342,6 +342,10 @@ namespace render_utils{
 
     bool SceneRenderServer::createOpenglContext() {
 
+        // memory allocation
+        vertexPtr = new float [nMaxTriangles*18];
+        indexPtr = new unsigned int [nMaxTriangles*3];
+
         // opengl context creation
         glfwInit();
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -390,10 +394,9 @@ namespace render_utils{
         glBindVertexArray(openglObjs.VAO);
         glBindBuffer(GL_ARRAY_BUFFER,openglObjs.VBO);
         glBufferData(GL_ARRAY_BUFFER,sizeof(float)*getNumVertex()*6,vertexPtr,GL_DYNAMIC_DRAW);
-        unsigned* indices = indexPtr;
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,openglObjs.EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     sizeof(unsigned int)*(getNumIndex()*3),indices,GL_DYNAMIC_DRAW);
+                     sizeof(unsigned int)*(getNumIndex()*3),indexPtr,GL_DYNAMIC_DRAW);
         printStr("uploaded vertex to buffer for future render request.");
     }
 
@@ -408,13 +411,14 @@ namespace render_utils{
         // Refresh vertices Array from mesh
         nVertex =0; nTriIndex = 0; // vertex number will increase as insert vertex is performed
         int nTriangles = mesh.GetTriangleIndices().NumElements()/3;
+        int nVertices = mesh.GetVertexPositions().NumElements()/3;
 
         // vertex + COLOR
         auto& tVert = mesh.GetVertexPositions();
         auto curVertexPtr = (float *)tVert.GetDataPtr();
         auto& tCol = mesh.GetVertexColors();
         auto curColorPtr = (float *)tCol.GetDataPtr();
-        for (int i = 0 ; i < min(nTriangles,nMaxTriangles); i++){
+        for (int i = 0 ; i < nVertices; i++){
             float x,y,z,r,g,b;
             x = curVertexPtr[3*i];
             y = curVertexPtr[3*i+1];
@@ -428,7 +432,7 @@ namespace render_utils{
         // index
         auto& tIndex = mesh.GetTriangleIndices();
         auto curIndexPtr = (unsigned int *)tIndex.GetDataPtr();
-        for (int i = 0 ; i < min(nTriangles,nMaxTriangles); i++){
+        for (int i = 0 ; i < nTriangles; i++){
             unsigned int v1,v2,v3;
             v1 = curIndexPtr[3*i];
             v2 = curIndexPtr[3*i+1];

@@ -15,12 +15,37 @@ namespace o3d_legacy = open3d::geometry;
 namespace o3d_core = open3d::core;
 namespace o3d_vis = open3d::visualization;
 
+o3d_vis::Visualizer* vis; // This visualization should run in other thread. Avoid conviction with opengl context of our rendering algorithm
+mutex mutex_;
+shared_ptr<o3d_legacy::TriangleMesh> meshPtr;
+bool isVisInit = false;
 
+void drawThread(){
+    vis = new o3d_vis::Visualizer();
+    vis->CreateVisualizerWindow("Render Image");
+    while(true)
+        // draw current mesh
+        if (meshPtr != NULL )
+            if (meshPtr->HasTriangles()  && mutex_.try_lock()   ) {
+
+                if (!isVisInit) {
+                    vis->AddGeometry(meshPtr);
+                    isVisInit = true;
+                } else {
+                    vis->UpdateGeometry(meshPtr);
+                    vis->PollEvents();
+                    vis->UpdateRender();
+                }
+                mutex_.unlock();
+                this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+}
 
 int main(){
 
     // OPENGL
-    string shaderDir = "C:/Users/junbs/OneDrive/Documents/GitHub/see_with_you/include/shader";
+
+    string shaderDir = "C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/include/shader";
     render_utils::Param param;
     param.shaderRootDir = shaderDir;
     render_utils::SceneRenderServer glServer(param);
@@ -28,7 +53,7 @@ int main(){
 
 
     // Initialize ZED
-    string svoFileDir = "C:/Users/junbs/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
 
     CameraParam zedParam(" ",svoFileDir);
     ZedState zedState;
@@ -54,7 +79,6 @@ int main(){
     cv::Mat hostDepth;
 
     // Open3D image binding
-    bool isVisInit = false;
 
     o3d_core::Device device_gpu("CUDA:0");
     o3d_core::Device device_cpu("CPU:0");
@@ -84,12 +108,11 @@ int main(){
 
    auto extrinsicO3dTensor = o3d_core::Tensor::Eye(4,o3d_core::Float64,device_gpu); // todo from ZED
    shared_ptr<o3d_legacy::Image> renderImagePtr = make_shared<o3d_legacy::Image>();
-   shared_ptr<o3d_legacy::TriangleMesh> meshPtr = make_shared<o3d_legacy::TriangleMesh>();
+   meshPtr = make_shared<o3d_legacy::TriangleMesh>();
    o3d_tensor::TriangleMesh mesh;
 
    // Open3d visualizer
-   o3d_vis::Visualizer vis;
-   vis.CreateVisualizerWindow("Render Image");
+   std::thread drawRoutine(drawThread);
 
     // candidate cam poses (moving along a slider and heading to target)
     int nCam = 5;
@@ -118,9 +141,9 @@ int main(){
         zedState.grab(zedParam);
         cv::cuda::cvtColor(deviceImage, deviceImage3ch, cv::COLOR_BGRA2RGB);
 
-        // mesh rendering
         {
 
+            // mesh rendering
             ElapseMonitor monitor("TSDF integration + register mesh + rendering "); // in Release, 2ms
             volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,5);
             mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
@@ -131,22 +154,13 @@ int main(){
                 renderResult = glServer.renderService(camSet,mesh);
 
         }
-
-        *meshPtr = mesh.ToLegacy();
-        // draw current mesh
-        if (meshPtr->HasTriangles()){
-
-            if (! isVisInit){
-                vis.AddGeometry(meshPtr);
-                isVisInit = true;
-            }else{
-                vis.UpdateGeometry(meshPtr);
-                vis.PollEvents();
-                vis.UpdateRender();
-            }
+        {
+            lock_guard<mutex> lock(mutex_);
+            *meshPtr = mesh.ToLegacy();
         }
-
     }
+
+    drawRoutine.join();
 
     return 0;
 }
