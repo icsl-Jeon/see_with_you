@@ -17,10 +17,18 @@ namespace o3d_vis = open3d::visualization;
 
 o3d_vis::Visualizer* vis; // This visualization should run in other thread. Avoid conviction with opengl context of our rendering algorithm
 mutex mutex_;
+
 shared_ptr<o3d_legacy::TriangleMesh> meshPtr;
+shared_ptr<o3d_legacy::TriangleMesh> worldFramePtr;
+std::vector<shared_ptr<o3d_legacy::TriangleMesh>> camPtrSet;
+
 bool isVisInit = false;
+int nCam = 9; // number of possible cams
 
 void drawThread(){
+    // We use x-fowarding z-up cooridnate for camera. That is, R_wc = [0 0 1 ; -1 0 0 ; 0 -1 0]
+    worldFramePtr = std::make_shared<o3d_legacy::TriangleMesh>();
+    worldFramePtr = o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);
     vis = new o3d_vis::Visualizer();
     vis->CreateVisualizerWindow("Render Image");
     while(true)
@@ -29,7 +37,11 @@ void drawThread(){
             if (meshPtr->HasTriangles()  && mutex_.try_lock()   ) {
 
                 if (!isVisInit) {
+                    for (int camIdx = 0 ; camIdx < nCam ; camIdx++)
+                        vis->AddGeometry(camPtrSet[camIdx]);
+
                     vis->AddGeometry(meshPtr);
+                    vis->AddGeometry(worldFramePtr);
                     isVisInit = true;
                 } else {
                     vis->UpdateGeometry(meshPtr);
@@ -75,7 +87,6 @@ int main(){
     uint row = zedParam.getCvSize().height;
     uint col = zedParam.getCvSize().width;
 
-    cv::Mat hostImage;
     cv::Mat hostDepth;
 
     // Open3D image binding
@@ -114,27 +125,32 @@ int main(){
    // Open3d visualizer
    std::thread drawRoutine(drawThread);
 
-    // candidate cam poses (moving along a slider and heading to target)
-    int nCam = 5;
+    // candidate cam poses (moving along a slider and heading x axis to target)
+    camPtrSet.resize(nCam);
     misc::PoseSet camSet;
-    misc::Pose poseCam; // default optical coordinate (z-forwarding)
+    misc::Pose poseCam; // default optical coordinate
     poseCam.poseMat.setIdentity();
-    Eigen::Matrix3f rot = Eigen::Matrix3f::Zero();
-    rot(1,0) = -1; rot(2,1) = -1; rot(0,2) = 1;
-    poseCam.poseMat.matrix().block(0,0,3,3) = rot;
     float sliderLength = 4.0;
     float targetFromOrig = 1.0;
     for (int camIdx = 0; camIdx < nCam ; camIdx++){
         float transl = -sliderLength/2 +  sliderLength / (nCam - 1) * camIdx;
-        float angleToTarget = -atan(sliderLength / targetFromOrig);
+        float angleToTarget = -atan(transl / targetFromOrig);
         auto pose = poseCam;
-        pose.poseMat.translate(Eigen::Vector3f(-transl,0,0));
-        auto rev = Eigen::AngleAxisf (angleToTarget,Eigen::Vector3f(0,1,0));
+        pose.poseMat.translate(Eigen::Vector3f(0,transl,0));
+        auto rev = Eigen::AngleAxisf (angleToTarget,Eigen::Vector3f(0,0,1));
         pose.poseMat.rotate(rev);
         camSet.push_back(pose);
-        cout << pose.poseMat.matrix() << endl; // for debugging
+        o3d_legacy::TriangleMesh camFrame = *o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);       
+        camFrame = camFrame.Transform(pose.poseMat.matrix().cast<double>());
+        camPtrSet[camIdx] = std::make_shared<o3d_legacy::TriangleMesh>();
+        *camPtrSet[camIdx] = camFrame;
     }
 
+    // T_cw / T_wc
+    Eigen::Matrix4f T_wc = Eigen::Matrix4f::Zero();
+    T_wc(0,2) = 1; T_wc(1,0) = -1; T_wc(2,1) = -1; T_wc(3,3) = 1;
+    o3d_core::Tensor T_wc_t = o3d_core::eigen_converter::EigenMatrixToTensor(T_wc); T_wc_t.To(device_gpu);
+    extrinsicO3dTensor = T_wc_t.Inverse(); // seems that open3d fuckers don't know what extrinsic is. Why fucking inverse is needed here?
 
 
     while (true){
@@ -150,8 +166,12 @@ int main(){
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
                                                  o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
             mesh = mesh.To(device_cpu);
-            if (! mesh.IsEmpty())
-                renderResult = glServer.renderService(camSet,mesh);
+            if (! mesh.IsEmpty()) {            
+                renderResult = glServer.renderService(camSet, mesh);
+                cv::Mat renderImage = renderResult.renderImage;
+                cv::imshow("render result", renderImage);
+                cv::waitKey(1);
+            }
 
         }
         {

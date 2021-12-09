@@ -83,7 +83,7 @@ namespace render_utils{
         // Projection
         glm::mat4 projection = glm::perspective(glm::radians(FOV),
                                                 (float) width / (float) height,
-                                                0.5f, 50.0f);
+                                                0.0f, 500.0f);
         shader->setMat4("projection", projection);
     }
 
@@ -91,7 +91,7 @@ namespace render_utils{
  * set view matrix of shader with camPose (robotics world frame)
  * see (img/auto_chaser4 - Coordinate system.png)
  * @param shader : soa.fs and soa.vs
- * @param camPose : misc::Pose from robotics world fram (x-axis = optical)
+ * @param camPose : misc::Pose from robotics world frame (x-axis = optical)
  */
     void setCameraSingle(Shader *shader, const misc::Pose &camPose) {
 
@@ -375,8 +375,8 @@ namespace render_utils{
             return false;
         }
 
-        glEnable(GL_LINE_SMOOTH);
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
 
         return true;
     }
@@ -426,17 +426,21 @@ namespace render_utils{
             r = curColorPtr[3*i] ;
             g = curColorPtr[3*i+1] ;
             b = curColorPtr[3*i+2] ;
+
+//            printf("X = [%.2f , %.2f , %.2f ] / C = [%.2f , %.2f , %.2f ]\n",x,y,z,r,g,b);
             insertVertex(x,y,z,r,g,b);
         }
 
         // index
         auto& tIndex = mesh.GetTriangleIndices();
-        auto curIndexPtr = (unsigned int *)tIndex.GetDataPtr();
+        auto tIndexCont  = tIndex.To(o3d_core::Int32).Contiguous();
+        auto curIndexPtr = (unsigned int *)tIndexCont.GetDataPtr();
         for (int i = 0 ; i < nTriangles; i++){
             unsigned int v1,v2,v3;
             v1 = curIndexPtr[3*i];
             v2 = curIndexPtr[3*i+1];
             v3 = curIndexPtr[3*i+2];
+//            printf("[%d , %d , %d ]\n",v1,v2,v3);
             insertIndex(v1,v2,v3);
         }
 

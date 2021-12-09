@@ -9,15 +9,13 @@ message("Current build type: ${CMAKE_BUILD_TYPE}")
 # In case WIN32,
 # we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
 # Change name Open3D_3rdparty_tbb_tbb_static to tbb_static
-IF (${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Release")
-ELSEIF(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-#    set(OPEN3D_BUILD_DIR "C:/Users/JBS/OneDrive/Documents/window_dev/Open3D_built/RelWithDebInfo")
-#    set(OPEN3D_BUILD_DIR "C:/Users/JBS/OneDrive/Documents/window_dev/Open3D_built/Release")
-    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Release")
-ELSE()
-    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Debug")
-ENDIF()
+#IF (${CMAKE_BUILD_TYPE} EQUAL "Release")
+#    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Release")
+#ELSEIF(${CMAKE_BUILD_TYPE} EQUAL "RelWithDebInfo")
+    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/RelWithDebInfo")
+#ELSE()
+#    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Debug")
+#ENDIF()
 include("${OPEN3D_BUILD_DIR}/CMake/Open3DConfig.cmake")
 link_directories("${OPEN3D_BUILD_DIR}/lib")
 

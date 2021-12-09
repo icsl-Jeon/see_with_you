@@ -54,7 +54,7 @@ bool zed_utils::initCamera(sl::Camera &zed, sl::InitParameters initParameters) {
 
     // Parameter setting
     initParameters.coordinate_units = sl::UNIT::METER;
-//    initParameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
+    initParameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
     initParameters.depth_mode = sl::DEPTH_MODE::QUALITY;
     initParameters.depth_maximum_distance = 7.0;
     initParameters.depth_minimum_distance = 0.1;
