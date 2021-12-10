@@ -12,7 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <open3d/Open3D.h> // for GLAD
+#include <open3d/Open3D.h> // for GLEW
 class Shader
 {
 public:

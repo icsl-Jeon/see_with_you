@@ -54,10 +54,11 @@ void drawThread(){
 }
 
 int main(){
+    string userName = "junbs";
 
     // OPENGL
 
-    string shaderDir = "C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/include/shader";
+    string shaderDir = "C:/Users/" + userName +"/OneDrive/Documents/GitHub/see_with_you/include/shader";
     render_utils::Param param;
     param.shaderRootDir = shaderDir;
     render_utils::SceneRenderServer glServer(param);
@@ -65,7 +66,7 @@ int main(){
 
 
     // Initialize ZED
-    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+    string svoFileDir = "C:/Users/" + userName + "/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
 
     CameraParam zedParam(" ",svoFileDir);
     ZedState zedState;
@@ -133,14 +134,14 @@ int main(){
     float sliderLength = 4.0;
     float targetFromOrig = 1.0;
     for (int camIdx = 0; camIdx < nCam ; camIdx++){
-        float transl = -sliderLength/2 +  sliderLength / (nCam - 1) * camIdx;
+        float transl = sliderLength/2 -  sliderLength / (nCam - 1) * camIdx;
         float angleToTarget = -atan(transl / targetFromOrig);
         auto pose = poseCam;
         pose.poseMat.translate(Eigen::Vector3f(0,transl,0));
         auto rev = Eigen::AngleAxisf (angleToTarget,Eigen::Vector3f(0,0,1));
         pose.poseMat.rotate(rev);
         camSet.push_back(pose);
-        o3d_legacy::TriangleMesh camFrame = *o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);       
+        o3d_legacy::TriangleMesh camFrame = *o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);
         camFrame = camFrame.Transform(pose.poseMat.matrix().cast<double>());
         camPtrSet[camIdx] = std::make_shared<o3d_legacy::TriangleMesh>();
         *camPtrSet[camIdx] = camFrame;

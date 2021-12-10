@@ -47,12 +47,12 @@ namespace render_utils {
     struct Param {
         bool verbose;
         // tile size.
-        unsigned int imgWidth = 100;
-        unsigned int imgHeight = 100;
+        unsigned int imgWidth = 200;
+        unsigned int imgHeight = 200;
         // total composite image
         unsigned int displayWidth = 1920;
         unsigned int displayHeight = 1080;
-        float fovDeg = 350.0f; // degree
+        float fovDeg = 90.0f; // degree
         string shaderRootDir;
         double vertexProximityThreshold = 1e-10;
         int renderMeshQueue = 5000; //
@@ -76,7 +76,8 @@ namespace render_utils {
     cv::Mat render(Shader *shader, const misc::Pose &camPose, RenderArgument arg, vector<cv::Rect> &tileRCMap);
     //! Shade tile (R x C) using scene shading
     cv::Mat renderTile(Shader *shader, Shader *shaderTile,
-                       const PoseSet &poseSet, RenderArgument arg, vector<cv::Rect> &tileRCMap);
+                       const PoseSet &poseSet, RenderArgument arg, vector<cv::Rect> &tileRCMap,
+                       float * vertexTile);
 
     struct RenderResult{
         unsigned int tileRow;
@@ -109,6 +110,7 @@ namespace render_utils {
     private:
         Param param;
         bool isShaderInit = false;
+        bool isRenderTried = false;
         string myName = "MeshShader: ";
         OpenglObjects openglObjs; //! buffer objects
         Shader *sceneShader; //! render scene with meshes from a camera pose
@@ -120,6 +122,7 @@ namespace render_utils {
         //! Raw buffer used for opengl rendering. This should be built from mesh queue at meshQueueToVertexBuffer()
         float* vertexPtr; // x,y,z,r,g,b
         unsigned int* indexPtr; // v1,v2,v3
+        float* vertexTile;
         int nVertex = 0; //! number of vertex (x,y,z,r,g,b). total data array to contain = 6*nVertex Opengl VBO uses this
         int nTriIndex = 0; //! number of vertex (v1,v2,v3). total data array to contain = 3*nTriIndex Opengl EBO uses this
 

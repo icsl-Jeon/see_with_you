@@ -83,7 +83,7 @@ namespace render_utils{
         // Projection
         glm::mat4 projection = glm::perspective(glm::radians(FOV),
                                                 (float) width / (float) height,
-                                                0.0f, 500.0f);
+                                                0.1f, 5.0f);
         shader->setMat4("projection", projection);
     }
 
@@ -168,7 +168,8 @@ namespace render_utils{
  * @return
  */
     cv::Mat renderTile(Shader *shader, Shader *shaderTile,
-                            const PoseSet &poseSet, RenderArgument arg,vector<cv::Rect>& tileRCMap) {
+                            const PoseSet &poseSet, RenderArgument arg,vector<cv::Rect>& tileRCMap,
+                            float* vertexTile) {
 
         // setting scene shader
         initShaderTransform(shader, arg.renderFov,
@@ -176,8 +177,6 @@ namespace render_utils{
 
         // 1. initialize tile vertices
         tileRCMap.clear();
-
-        float* vertexTile = new float[arg.tileRow * arg.tileCol * 24];
         int cntTile = 0;
 
         // screen quad VAO
@@ -210,7 +209,7 @@ namespace render_utils{
             }
 
         glBindBuffer(GL_ARRAY_BUFFER, arg.quadVbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertexTile), &vertexTile, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(float)*24*arg.tileCol*arg.tileRow, vertexTile, GL_STATIC_DRAW);
 
 
         glBindVertexArray(arg.vao);
@@ -415,9 +414,13 @@ namespace render_utils{
 
         // vertex + COLOR
         auto& tVert = mesh.GetVertexPositions();
-        auto curVertexPtr = (float *)tVert.GetDataPtr();
+        auto tVertt  = tVert.To(o3d_core::Float32).Contiguous();
+        auto curVertexPtr = (float *)tVertt.GetDataPtr();
+
+
         auto& tCol = mesh.GetVertexColors();
-        auto curColorPtr = (float *)tCol.GetDataPtr();
+        auto tColl = tCol.To(o3d_core::Float32).Contiguous();
+        auto curColorPtr = (float *)tColl.GetDataPtr();
         for (int i = 0 ; i < nVertices; i++){
             float x,y,z,r,g,b;
             x = curVertexPtr[3*i];
@@ -427,7 +430,7 @@ namespace render_utils{
             g = curColorPtr[3*i+1] ;
             b = curColorPtr[3*i+2] ;
 
-//            printf("X = [%.2f , %.2f , %.2f ] / C = [%.2f , %.2f , %.2f ]\n",x,y,z,r,g,b);
+//            printf("X = [%.4f , %.4f , %.4f ] / C = [%.4f , %.4f , %.4f ]\n",x,y,z,r,g,b);
             insertVertex(x,y,z,r,g,b);
         }
 
@@ -481,6 +484,13 @@ namespace render_utils{
                     param.displayHeight,
                     camPoseSet.size(),
                     arg.tileRow,arg.tileCol);
+
+        // Only after adding this (having a pointer insider the class), something appeared...
+        if (! isRenderTried){
+            vertexTile = new float [arg.tileRow*arg.tileCol*24];
+            isRenderTried = true;
+        }
+
         renderResult.tileRow = arg.tileRow;
         renderResult.tileCol = arg.tileCol;
         renderResult.viewPoseSet = camPoseSet;
@@ -492,7 +502,8 @@ namespace render_utils{
         arg.textureColorBuffer = openglObjs.textureColorBuffer;
 
         // rendering
-        renderResult.renderImage = renderTile(sceneShader,tileShader,camPoseSet,arg,renderResult.tileMap);
+        renderResult.renderImage = renderTile(sceneShader,tileShader,camPoseSet,arg,
+                                              renderResult.tileMap,vertexTile);
         double elapse = timer.stop();
         string message = "Evaluator: total render process took " + to_string(elapse) + " ms";
         printStr(message);
