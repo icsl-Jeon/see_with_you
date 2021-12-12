@@ -388,15 +388,16 @@ namespace render_utils{
         if (getNumVertex() ==0 || getNumIndex() ==0){
             printStr("E: trying bind with zero-sized vertex array." );
         }
-
+        Timer timerBind;
         // upload vertices of static obstacle to the buffer of manager
         glBindVertexArray(openglObjs.VAO);
         glBindBuffer(GL_ARRAY_BUFFER,openglObjs.VBO);
-        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*getNumVertex()*6,vertexPtr,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*getNumVertex()*6,vertexPtr,GL_STREAM_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,openglObjs.EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     sizeof(unsigned int)*(getNumIndex()*3),indexPtr,GL_DYNAMIC_DRAW);
-        printStr("uploaded vertex to buffer for future render request.");
+                     sizeof(unsigned int)*(getNumIndex()*3),indexPtr,GL_STREAM_DRAW);
+        double elapseBind = timerBind.stop();
+//        printf("MeshShader: bound vertices to buffer for render request (%.3f ms). \n",elapseBind);
     }
 
 /**
@@ -412,15 +413,25 @@ namespace render_utils{
         int nTriangles = mesh.GetTriangleIndices().NumElements()/3;
         int nVertices = mesh.GetVertexPositions().NumElements()/3;
 
-        // vertex + COLOR
+        // open3d tensor conversion
+        Timer timerTensorConv;
+
         auto& tVert = mesh.GetVertexPositions();
         auto tVertt  = tVert.To(o3d_core::Float32).Contiguous();
         auto curVertexPtr = (float *)tVertt.GetDataPtr();
 
-
         auto& tCol = mesh.GetVertexColors();
         auto tColl = tCol.To(o3d_core::Float32).Contiguous();
         auto curColorPtr = (float *)tColl.GetDataPtr();
+
+        auto& tIndex = mesh.GetTriangleIndices();
+        auto tIndexCont  = tIndex.To(o3d_core::Int32).Contiguous();
+        auto curIndexPtr = (unsigned int *)tIndexCont.GetDataPtr();
+
+        double elapseConv = timerTensorConv.stop(false);
+
+        Timer dataCopy;
+        // vertex + COLOR
         for (int i = 0 ; i < nVertices; i++){
             float x,y,z,r,g,b;
             x = curVertexPtr[3*i];
@@ -435,9 +446,6 @@ namespace render_utils{
         }
 
         // index
-        auto& tIndex = mesh.GetTriangleIndices();
-        auto tIndexCont  = tIndex.To(o3d_core::Int32).Contiguous();
-        auto curIndexPtr = (unsigned int *)tIndexCont.GetDataPtr();
         for (int i = 0 ; i < nTriangles; i++){
             unsigned int v1,v2,v3;
             v1 = curIndexPtr[3*i];
@@ -446,8 +454,10 @@ namespace render_utils{
 //            printf("[%d , %d , %d ]\n",v1,v2,v3);
             insertIndex(v1,v2,v3);
         }
+        float elapseCopy = dataCopy.stop(false);
+//        printf("MeshShader: triangles = %d, vertices = %d. Tensor conv = %.2f Ms / Copy = %.2f Ms\n",
+//               nTriangles,nVertex,elapseConv,elapseCopy);
 
-        printStr("Current triangle=" + to_string(nTriangles) +" / vertices=" + to_string(nVertex));
 
         // 2. Bind buffer for future rendering
         uploadVertexToRender();
@@ -465,11 +475,12 @@ namespace render_utils{
             printf("shader has not yet initialized. Does not shade.\n");
             return renderResult;
         }
-
+        Timer timerUpload;
         if (! uploadMesh(mesh)){
             renderResult.isRenderSuccess = false;
             return renderResult;
         }
+        float uploadTime = timerUpload.stop();
 
         RenderArgument arg;
         arg.nTriangle = nMesh();
@@ -505,7 +516,7 @@ namespace render_utils{
         renderResult.renderImage = renderTile(sceneShader,tileShader,camPoseSet,arg,
                                               renderResult.tileMap,vertexTile);
         double elapse = timer.stop();
-        string message = "Evaluator: total render process took " + to_string(elapse) + " ms";
+        string message = "Render (ms): mesh loading="+ to_string(uploadTime) + " / total=" +  to_string(elapse);
         printStr(message);
         renderResult.elapse = elapse;
         renderResult.isRenderSuccess = true;

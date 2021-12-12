@@ -26,7 +26,7 @@ bool isVisInit = false;
 int nCam = 9; // number of possible cams
 
 void drawThread(){
-    // We use x-fowarding z-up cooridnate for camera. That is, R_wc = [0 0 1 ; -1 0 0 ; 0 -1 0]
+    // We use x-fowarding z-up coordinate for camera. That is, R_wc = [0 0 1 ; -1 0 0 ; 0 -1 0]
     worldFramePtr = std::make_shared<o3d_legacy::TriangleMesh>();
     worldFramePtr = o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);
     vis = new o3d_vis::Visualizer();
@@ -35,13 +35,14 @@ void drawThread(){
         // draw current mesh
         if (meshPtr != NULL )
             if (meshPtr->HasTriangles()  && mutex_.try_lock()   ) {
-
                 if (!isVisInit) {
                     for (int camIdx = 0 ; camIdx < nCam ; camIdx++)
                         vis->AddGeometry(camPtrSet[camIdx]);
-
                     vis->AddGeometry(meshPtr);
                     vis->AddGeometry(worldFramePtr);
+                    vis->GetViewControl().SetFront({-0.8,0,0.2});
+                    vis->GetViewControl().SetZoom(0.5);
+                    vis->GetViewControl().SetUp({0,0,1});
                     isVisInit = true;
                 } else {
                     vis->UpdateGeometry(meshPtr);
@@ -87,11 +88,13 @@ int main(){
     deviceImage3ch = cv::cuda::createContinuous(zedParam.getCvSize(),CV_8UC3);
     uint row = zedParam.getCvSize().height;
     uint col = zedParam.getCvSize().width;
+    cv::namedWindow("render window",cv::WINDOW_KEEPRATIO);
+    cv::resizeWindow("render window", 600,400);
+
 
     cv::Mat hostDepth;
 
     // Open3D image binding
-
     o3d_core::Device device_gpu("CUDA:0");
     o3d_core::Device device_cpu("CPU:0");
     o3d_core::Dtype rgbType = o3d_core::Dtype::UInt8;
@@ -114,8 +117,8 @@ int main(){
    auto volumePtr = (new o3d_tensor::TSDFVoxelGrid({{"tsdf", open3d::core::Dtype::Float32},
                                                 {"weight", open3d::core::Dtype::UInt16},
                                                 {"color", open3d::core::Dtype::UInt16}},
-                                               8.f / 512.f,  0.04f, 16,
-                                               1000, device_gpu));
+                                               0.02,  0.04f, 16,
+                                               100, device_gpu));
 
 
    auto extrinsicO3dTensor = o3d_core::Tensor::Eye(4,o3d_core::Float64,device_gpu); // todo from ZED
@@ -131,7 +134,7 @@ int main(){
     misc::PoseSet camSet;
     misc::Pose poseCam; // default optical coordinate
     poseCam.poseMat.setIdentity();
-    float sliderLength = 4.0;
+    float sliderLength = 2.0;
     float targetFromOrig = 1.0;
     for (int camIdx = 0; camIdx < nCam ; camIdx++){
         float transl = sliderLength/2 -  sliderLength / (nCam - 1) * camIdx;
@@ -161,16 +164,18 @@ int main(){
         {
 
             // mesh rendering
-            ElapseMonitor monitor("TSDF integration + register mesh + rendering "); // in Release, 2ms
-            volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,5);
-            mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
-                                                 o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
-                                                 o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
-            mesh = mesh.To(device_cpu);
+            {
+                ElapseMonitor monitor("TSDF integration + register mesh ");
+                volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,5);
+                mesh = volumePtr->ExtractSurfaceMesh(-1,3.0,
+                                                     o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
+                                                     o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
+                mesh = mesh.To(device_cpu);
+            }
             if (! mesh.IsEmpty()) {            
                 renderResult = glServer.renderService(camSet, mesh);
                 cv::Mat renderImage = renderResult.renderImage;
-                cv::imshow("render result", renderImage);
+                cv::imshow("render window", renderImage);
                 cv::waitKey(1);
             }
 

@@ -92,14 +92,13 @@ namespace iswy{
             zed.camera.close();
             return false;
         }
-        /**
+
         returned_state = zed.camera.enableObjectDetection(detectionParameters);
         if(returned_state != sl::ERROR_CODE::SUCCESS) {
             printf("Enabling object detection failed: \n");
             zed.camera.close();
             return false;
         }
-        **/
 
         sl::CameraConfiguration intrinsicParam = zed.camera.getCameraInformation().camera_configuration;
         fx = intrinsicParam.calibration_parameters.left_cam.fx;
@@ -136,11 +135,9 @@ namespace iswy{
         // update states
         camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::GPU);
         camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::GPU);
-        /**
         camera.retrieveObjects(humans,runParam.getObjRtParam());
         if (! humans.object_list.empty())
             actor = humans.object_list[0];
-        **/
 
         return isOk;
     }
