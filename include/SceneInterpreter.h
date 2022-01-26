@@ -65,6 +65,7 @@ namespace iswy { // i see with you
 
         bool grab(const CameraParam & runParam);
         bool markHumanPixels (cv::cuda::GpuMat& maskMat);
+        Eigen::Matrix4f getPoseMat() const;
     };
 
     struct CameraParam{
@@ -81,12 +82,14 @@ namespace iswy { // i see with you
         sl::ObjectDetectionParameters* detectionParameters;
         sl::RuntimeParameters* runtimeParameters;
         sl::ObjectDetectionRuntimeParameters* objectDetectionRuntimeParameters;
+        sl::PositionalTrackingParameters* positionalTrackingParameters;
 
     public:
         CameraParam(string paramterFilePath,string svoFileDir);
         bool open(ZedState& zed);
         sl::RuntimeParameters getRtParam() const {return *runtimeParameters;};
         sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return *objectDetectionRuntimeParameters;}
+        sl::PositionalTrackingParameters getPoseParam() const {return *positionalTrackingParameters;}
         cv::Size getCvSize() const {return cv::Size(width,height);};
         cv::Point2f project(const Eigen::Vector3f& pnt) const{
             return {fx*pnt.x()/pnt.z() + cx, fx*pnt.y()/pnt.z() + cy};};

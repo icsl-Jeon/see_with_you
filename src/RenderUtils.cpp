@@ -475,6 +475,10 @@ namespace render_utils{
             printf("shader has not yet initialized. Does not shade.\n");
             return renderResult;
         }
+        if (! camPoseSet.size()){
+            printf("Shading requested, but no pose candidate.\n");
+            return renderResult;
+        }
         Timer timerUpload;
         if (! uploadMesh(mesh)){
             renderResult.isRenderSuccess = false;

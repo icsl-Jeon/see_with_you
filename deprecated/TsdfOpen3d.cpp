@@ -21,7 +21,7 @@ namespace o3d_vis = open3d::visualization;
 int main(){
 
     // Initialize ZED
-    string svoFileDir = "C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
+    string svoFileDir = "C:/Users/junbs/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
 //    string svoFileDir = "C:\\Users\\JBS\\OneDrive\\Documents\\ZED\\HD1080_SN28007858_14-25-48.svo";
 //    string svoFileDir = "";
     ZedState zedState;

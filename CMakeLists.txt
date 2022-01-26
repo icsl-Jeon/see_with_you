@@ -69,16 +69,18 @@ include_directories(./include)
 
 add_executable(RunScene exe/RunScene.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
 target_link_libraries(RunScene PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
+#
+#add_executable(RunVtkTsdf deprecated/TsdfOpenCV.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp )
+#target_link_libraries(RunVtkTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
 
-add_executable(RunVtkTsdf test/TsdfOpenCV.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp )
-target_link_libraries(RunVtkTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
+#add_executable(RunOpen3DTsdf deprecated/TsdfOpen3d.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
+#target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} )
 
 add_executable(RunOpen3dOpengl test/TsdfOpen3dOpengl.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
 target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )
 
-add_executable(RunOpen3DTsdf test/TsdfOpen3d.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
-target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} )
-
+add_executable(RenderVsReal test/RenderVsReal.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
+target_link_libraries(RenderVsReal PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )
 
 if(WIN32)
     get_target_property(open3d_type Open3D::Open3D TYPE)

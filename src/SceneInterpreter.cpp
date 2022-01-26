@@ -37,6 +37,7 @@ namespace iswy{
         detectionParameters = new sl::ObjectDetectionParameters;
         runtimeParameters = new sl::RuntimeParameters;
         objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
+        positionalTrackingParameters = new sl::PositionalTrackingParameters;
 
         if (! svoFileDir.empty())
             initParameters->input.setFromSVOFile(svoFileDir.c_str());
@@ -45,7 +46,7 @@ namespace iswy{
         isSvo = true;
 
         initParameters->coordinate_units = sl::UNIT::METER;
-//    initParameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
+        initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
         initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
         initParameters->depth_maximum_distance = 7.0;
         initParameters->depth_minimum_distance = 0.1;
@@ -56,6 +57,7 @@ namespace iswy{
         detectionParameters->enable_mask_output = true;
 
         runtimeParameters->confidence_threshold = 50;
+        positionalTrackingParameters->enable_area_memory = true;
     }
 
     Eigen::Matrix3d CameraParam::getCameraMatrix() const {
@@ -100,6 +102,13 @@ namespace iswy{
             return false;
         }
 
+        returned_state = zed.camera.enablePositionalTracking(*positionalTrackingParameters);
+        if(returned_state != sl::ERROR_CODE::SUCCESS) {
+            printf("Enabling position tracking failed: \n");
+            zed.camera.close();
+            return false;
+        }
+
         sl::CameraConfiguration intrinsicParam = zed.camera.getCameraInformation().camera_configuration;
         fx = intrinsicParam.calibration_parameters.left_cam.fx;
         fy = intrinsicParam.calibration_parameters.left_cam.fy;
@@ -136,10 +145,24 @@ namespace iswy{
         camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::GPU);
         camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::GPU);
         camera.retrieveObjects(humans,runParam.getObjRtParam());
+        camera.getPosition(pose);
+
         if (! humans.object_list.empty())
             actor = humans.object_list[0];
 
         return isOk;
+    }
+
+    Eigen::Matrix4f ZedState::getPoseMat() const {
+        auto transform = sl::Transform();
+        Eigen::Matrix<float,3,1> transl(pose.pose_data.getTranslation().v);
+        Eigen::Matrix3f rot(pose.pose_data.getOrientation().getRotationMatrix().r);
+        Eigen::Matrix4f poseMat;
+        poseMat.setIdentity();
+        poseMat.block(0,0,3,3) = rot;
+        poseMat.block(0,3,3,1) = transl;
+//        cout << poseMat << endl;
+        return poseMat;
     }
 
     bool ZedState::markHumanPixels(cv::cuda::GpuMat &maskMat) {
