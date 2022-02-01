@@ -26,13 +26,14 @@ shared_ptr<o3d_legacy::TriangleMesh> curCamPtr; // current cam
 
 bool isVisInit = false;
 const int nCam = 10; // number of candidate views
-
 void drawThread(){
     // We use x-fowarding z-up coordinate for camera. That is, R_wc = [0 0 1 ; -1 0 0 ; 0 -1 0]
     worldFramePtr = std::make_shared<o3d_legacy::TriangleMesh>();
     worldFramePtr = o3d_legacy::TriangleMesh::CreateCoordinateFrame(0.1);
     vis = new o3d_vis::Visualizer();
     vis->CreateVisualizerWindow("Render Image");
+
+    auto& ctl = vis->GetViewControl(); // this is very important.
     while(true)
         // draw current mesh
         if (meshPtr != NULL )
@@ -42,12 +43,19 @@ void drawThread(){
                         vis->AddGeometry(camPtrSet[camIdx]);
                     vis->AddGeometry(meshPtr);
 //                    vis->AddGeometry(worldFramePtr);
-                    vis->GetViewControl().SetFront({0.2,0,0.0});
-                    vis->GetViewControl().SetZoom(0.5);
-                    vis->GetViewControl().SetUp({0,0,1});
-                    vis->GetViewControl().SetConstantZFar(100); // essential to vis. the mesh far away
+                    // terms ref here = https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
+                    // https://github.com/isl-org/Open3D/issues/2139
                     vis->AddGeometry(curCamPtr);
+
+                    ctl.SetConstantZFar(100); // essential to vis. the mesh far away
+                    ctl.SetFront({-1, 0,0});
+                    ctl.SetUp({0,0,1});
+
+                    std::cout << "front" << ctl.GetFront() << std::endl;
+                    std::cout << "up" << ctl.GetUp() << std::endl;
+
                     isVisInit = true;
+
                 } else {
                     vis->UpdateGeometry(meshPtr);
                     vis->UpdateGeometry(curCamPtr);
@@ -153,8 +161,12 @@ int main(){
    auto volumePtr = (new o3d_tensor::TSDFVoxelGrid({{"tsdf", open3d::core::Dtype::Float32},
                                                 {"weight", open3d::core::Dtype::UInt16},
                                                 {"color", open3d::core::Dtype::UInt16}},
-                                               0.05,  0.04f, 16,
-                                               100, device_gpu));
+                                               0.08,  0.4f, 16,
+                                               50000, device_gpu));
+   // TUNING GUIDE (refer: http://www.open3d.org/docs/latest/tutorial/t_reconstruction_system/voxel_block_grid.html)
+   // 1. Lower voxel_size as much as possible until GPU memory explodes
+   // 2. A bigger sdf_trunc makes more image-like meshing
+   // 3. block_count: ??? smaller means frequent re-hashing. But cannot understand..
 
 
    auto extrinsicO3dTensor = o3d_core::Tensor::Eye(4,o3d_core::Float64,device_gpu); // todo from ZED
@@ -165,7 +177,6 @@ int main(){
 
     // Open3d visualizer
    std::thread drawRoutine(drawThread);
-
 
     // T_cw / T_wc
     Eigen::Matrix4f T_co = Eigen::Matrix4f::Zero(); // cam to optical
@@ -189,8 +200,8 @@ int main(){
                 ElapseMonitor monitor("TSDF integration + register mesh ");
                 volumePtr->Integrate(depthO3d,imageO3d,intrinsic,extrinsicO3dTensor,1,10);
 
-
-                mesh = volumePtr->ExtractSurfaceMesh(-1,1.0,
+                // Too much GPU memory
+                mesh = volumePtr->ExtractSurfaceMesh(-1,10.0,
                                                      o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::VertexMap |
                                                      o3d_tensor::TSDFVoxelGrid::SurfaceMaskCode::ColorMap);
                 mesh = mesh.To(device_cpu);

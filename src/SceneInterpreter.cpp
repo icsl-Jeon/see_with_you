@@ -156,7 +156,9 @@ namespace iswy{
     Eigen::Matrix4f ZedState::getPoseMat() const {
         auto transform = sl::Transform();
         Eigen::Matrix<float,3,1> transl(pose.pose_data.getTranslation().v);
-        Eigen::Matrix3f rot(pose.pose_data.getOrientation().getRotationMatrix().r);
+
+        Eigen::Matrix3f rot = Eigen::Map<Eigen::Matrix<float,3,3,Eigen::RowMajor> >(
+                pose.pose_data.getOrientation().getRotationMatrix().r);
         Eigen::Matrix4f poseMat;
         poseMat.setIdentity();
         poseMat.block(0,0,3,3) = rot;
