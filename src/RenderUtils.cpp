@@ -8,6 +8,8 @@ using namespace std;
 using namespace misc;
 
 namespace render_utils{
+
+
     /*
         * compute suitable tile arrangement (rows and cols)
         * @param format @ref RenderTileFormat
@@ -59,6 +61,13 @@ namespace render_utils{
         return Tcr;
     }
 
+    vector<cv::Mat> RenderResult::divideImages() const {
+        vector<cv::Mat> images;
+        for ( const auto& tile: tileMap){
+            images.push_back(renderImage(tile));
+        }
+        return images;
+    }
 
 
 /**

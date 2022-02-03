@@ -87,6 +87,8 @@ namespace render_utils {
         PoseSet viewPoseSet;
         bool isRenderSuccess;
         double elapse;
+        vector<cv::Mat> divideImages() const;
+
     };
 
     class SceneRenderServer  {

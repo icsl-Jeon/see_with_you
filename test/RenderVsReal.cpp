@@ -26,6 +26,73 @@ shared_ptr<o3d_legacy::TriangleMesh> curCamPtr; // current cam
 
 bool isVisInit = false;
 const int nCam = 10; // number of candidate views
+
+/// Scale images to a defined size but with original aspect ratio. The remaining part will be colored as bgcolor
+/// \param input
+/// \param dstSize
+/// \param bgcolor
+/// \return
+cv::Mat resizeKeepAspectRatio(const cv::Mat &input, const cv::Size &dstSize, const cv::Scalar &bgcolor)
+{
+    cv::Mat output;
+
+    double h1 = dstSize.width * (input.rows/(double)input.cols);
+    double w2 = dstSize.height * (input.cols/(double)input.rows);
+    if( h1 <= dstSize.height) {
+        cv::resize( input, output, cv::Size(dstSize.width, h1));
+    } else {
+        cv::resize( input, output, cv::Size(w2, dstSize.height));
+    }
+
+    int top = (dstSize.height-output.rows) / 2;
+    int down = (dstSize.height-output.rows+1) / 2;
+    int left = (dstSize.width - output.cols) / 2;
+    int right = (dstSize.width - output.cols+1) / 2;
+
+    cv::copyMakeBorder(output, output, top, down, left, right, cv::BORDER_CONSTANT, bgcolor );
+
+    return output;
+}
+
+/// Resizing and scaling to compile a comparative view between two image sequences.
+/// \details assuming the length of each vectors are same
+/// \param imgSeq1
+/// \param imgSeq2
+/// \return tiling of compared image sequences. [imgSeq1 ; imgSeq2]
+cv::Mat compareImageSequences(const vector<cv::Mat> imgSeq1, const vector<cv::Mat> imgSeq2 ){
+
+    cv::Mat resultTile;
+
+    // we assume both seq have a uniform image sizes
+    int nSeq = min (imgSeq1.size(), imgSeq2.size());
+    if (nSeq == 0)
+        return resultTile;
+
+    int tileR = min(imgSeq1[0].rows, imgSeq2[0].rows);
+    int tileC = min(imgSeq1[0].cols, imgSeq2[0].cols);
+    int N = min(imgSeq1.size(), imgSeq2.size());
+    cout << "composing " << N << " image sequence.." << endl;
+
+    resultTile = cv::Mat(tileR * 2, tileC * N, CV_8UC3, cv::Scalar(0,0,0));
+    for (int n = 0 ; n < N ; n++){
+        cv::Rect seq1(tileC * n, 0 , tileC, tileR);
+        cv::Rect seq2(tileC * n, tileR , tileC, tileR);
+
+        cv::Mat img1,img2;
+        img1 = resizeKeepAspectRatio(imgSeq1[n],seq1.size(),cv::Scalar(0,0,0));
+        img2 = resizeKeepAspectRatio(imgSeq2[n],seq2.size(),cv::Scalar(0,0,0));
+
+        img1.copyTo(resultTile(seq1)) ;
+        img2.copyTo(resultTile(seq2)) ;
+    }
+
+    return resultTile;
+}
+
+
+/**
+ * This thread draws the open3d objects including surface meshes, camera coordinate,
+ */
 void drawThread(){
     // We use x-fowarding z-up coordinate for camera. That is, R_wc = [0 0 1 ; -1 0 0 ; 0 -1 0]
     worldFramePtr = std::make_shared<o3d_legacy::TriangleMesh>();
@@ -110,6 +177,13 @@ int main(){
         << endl;
         exit(0);
     }
+
+    vector<cv::Mat> realImages(nCam);
+    for (int n = 0 ; n < nCam ; n++){
+        string fileName = datasetDir + "\\" + "image_" + to_string(n) + ".png";
+        realImages[n] = cv::imread(fileName);
+    }
+
 
 
     // Initialize ZED
@@ -208,8 +282,11 @@ int main(){
             }
             if (! mesh.IsEmpty()) {
                 renderResult = glServer.renderService(camSet, mesh);
-                cv::Mat renderImage = renderResult.renderImage;
-                cv::imshow("render window", renderImage);
+                // cv::Mat renderImage = renderResult.renderImage; // this is total tiled image
+                // compose a comparison view
+                vector<cv::Mat> renderImages = renderResult.divideImages();
+                cv::Mat comparisonView = compareImageSequences(renderImages, realImages);
+                cv::imshow("render window", comparisonView);
                 cv::waitKey(1);
             }
 
