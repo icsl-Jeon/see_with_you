@@ -4,7 +4,9 @@ ___
 ## Executables 
 ### RunOpen3dOpengl
 
+
 ### RenderVsReal
+![real vs render](https://user-images.githubusercontent.com/30062474/152312829-703b4903-834a-498f-9647-f2d32c0bd05c.PNG)
 This run file compares the real image view vs rendered view from the mesh (accumulated from .svo file). 
 real image view 
 When running this, a comparison view between the two will pop-up.  
