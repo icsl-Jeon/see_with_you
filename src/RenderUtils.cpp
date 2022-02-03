@@ -80,19 +80,24 @@ namespace render_utils{
  */
     void initShaderTransform(Shader *shader, float FOV, int width, int height) {
 
+        float factor= 2;
+        glm::vec3 scale = glm::vec3(factor,factor,factor);
+
         // Transformation from robotics ENU to opengl
         glm::mat4 world = glm::mat4(1.0); // T_Wr_Wg
         world = glm::rotate(world, float(3.141592/2.0), glm::vec3(1.0f, 0.0f, 0.0f));
         world = glm::rotate(world, -float(3.141592/2.0), glm::vec3(0.0f, 1.0f, 0.0f));
+        world = glm::scale(world, scale);
         shader->setMat4("world", glm::inverse(world));
 
         glm::mat4 model = glm::mat4(1.0); // just identity ?
+
         shader->setMat4("model", model);
 
         // Projection
         glm::mat4 projection = glm::perspective(glm::radians(FOV),
                                                 (float) width / (float) height,
-                                                0.1f, 5.0f);
+                                                0.1f, 10.0f);
         shader->setMat4("projection", projection);
     }
 

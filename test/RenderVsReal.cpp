@@ -63,6 +63,7 @@ cv::Mat compareImageSequences(const vector<cv::Mat> imgSeq1, const vector<cv::Ma
 
     cv::Mat resultTile;
 
+
     // we assume both seq have a uniform image sizes
     int nSeq = min (imgSeq1.size(), imgSeq2.size());
     if (nSeq == 0)

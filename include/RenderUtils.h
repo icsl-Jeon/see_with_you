@@ -47,16 +47,13 @@ namespace render_utils {
     struct Param {
         bool verbose;
         // tile size.
-        unsigned int imgWidth = 200;
-        unsigned int imgHeight = 200;
+        unsigned int imgWidth = 300;
+        unsigned int imgHeight = 300;
         // total composite image
         unsigned int displayWidth = 1920;
         unsigned int displayHeight = 1080;
         float fovDeg = 90.0f; // degree
         string shaderRootDir;
-        double vertexProximityThreshold = 1e-10;
-        int renderMeshQueue = 5000; //
-        float renderMeshUpdateInterval = 1.0;
     };
 
     //! Arrange tiles (render scene from multiple poses) into suitable row and column
