@@ -123,8 +123,6 @@ namespace iswy { // i see with you
         float objectDepthMin = 0.01;
         float objectDepthMax = 5.0;
         float objectDimensionAlongOptical = 1.0;
-
-
     };
 
     struct humanDetectParam{

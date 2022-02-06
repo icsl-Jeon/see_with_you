@@ -6,6 +6,7 @@ message("${CMAKE_MODULE_PATH}")
 set(USER_NAME "junbs")
 
 message("Current build type: ${CMAKE_BUILD_TYPE}")
+message("CMAKE PREFIX PATH ${CMAKE_PREFIX_PATH}")
 # In case WIN32,
 # we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
 # Change name Open3D_3rdparty_tbb_tbb_static to tbb_static
@@ -63,6 +64,8 @@ else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
+# FOR ARGUMENT PARSING
+find_package(YAML-CPP REQUIRED)
 
 # SEE_WITH_YOU
 include_directories(./include)
@@ -77,7 +80,7 @@ target_link_libraries(RunScene PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUD
 #target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} )
 
 add_executable(RunOpen3dOpengl test/TsdfOpen3dOpengl.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
-target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )
+target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm yaml-cpp )
 
 add_executable(RenderVsReal test/RenderVsReal.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
 target_link_libraries(RenderVsReal PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )

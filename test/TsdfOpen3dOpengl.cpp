@@ -5,6 +5,10 @@
 #include <SceneInterpreter.h>
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/rgbd.hpp"
+#include <yaml-cpp/yaml.h>
+
+
+
 
 #include <RenderUtils.h> // IDK for sure, but this should be included after sl/Camera.hpp...
 
@@ -54,12 +58,51 @@ void drawThread(){
             }
 }
 
-int main(){
-    string userName = "junbs";
+struct Param{
+    string shaderDir = "";
+    string svoFile = "";
+
+    float TSDF_VOXEL_SIZE = 0.08;
+    float TSDF_TRURC = 0.4;
+    float TSDF_BLOCK_COUNT = 50000;
+
+};
+
+// mostly referred https://www.fatalerrors.org/a/c-read-and-write-yaml-configuration-file.html
+bool argParse(string yamlFile, Param& inputParam){
+    try
+    {
+        cout<< "Provided config file: " << yamlFile <<endl;
+        YAML::Node config = YAML::LoadFile(yamlFile);
+        if(config["shader_root_dir"])
+            inputParam.shaderDir = config["shader_root_dir"].as<string>();
+        if(config["svo_file"])
+            inputParam.svoFile = config["svo_file"].as<string>();
+
+
+        return true;
+    }  catch (YAML::Exception  &e){
+        cerr << "error when opening the file" << endl;
+        return false;
+    }
+}
+
+int main(int argc, char ** argv){
+    // Parameter parsing
+    Param initParam;
+    if (argc > 1){
+        string configFile(argv[1]);
+        if (! argParse(configFile, initParam))
+            return 0;
+
+    }else{
+        cerr << "no config file given. Provide config.yaml" << endl;
+        return 0;
+    }
+
 
     // OPENGL
-
-    string shaderDir = "C:/Users/" + userName +"/OneDrive/Documents/GitHub/see_with_you/include/shader";
+    string shaderDir = initParam.shaderDir;
     render_utils::Param param;
     param.shaderRootDir = shaderDir;
     render_utils::SceneRenderServer glServer(param);
@@ -67,8 +110,7 @@ int main(){
 
 
     // Initialize ZED
-    string svoFileDir = "C:/Users/" + userName + "/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo"; // IDK.. but double slash does not work in my desktop\\
-
+    string svoFileDir = initParam.svoFile;
     CameraParam zedParam(" ",svoFileDir);
     ZedState zedState;
     zedParam.open(zedState);
@@ -117,8 +159,8 @@ int main(){
    auto volumePtr = (new o3d_tensor::TSDFVoxelGrid({{"tsdf", open3d::core::Dtype::Float32},
                                                 {"weight", open3d::core::Dtype::UInt16},
                                                 {"color", open3d::core::Dtype::UInt16}},
-                                               0.02,  0.04f, 16,
-                                               100, device_gpu));
+                                               0.07,  0.4f, 16,
+                                               50000, device_gpu));
 
 
    auto extrinsicO3dTensor = o3d_core::Tensor::Eye(4,o3d_core::Float64,device_gpu); // todo from ZED
