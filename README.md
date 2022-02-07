@@ -13,6 +13,8 @@ Found that if this is built in Debug, this `LoadFile` function works only when i
 * 
 
 ## Executables 
+Recommend run in Release mode. RelWithDebInfo seems to stop with an unknown issue. 
+
 ### 1. RunOpen3dOpengl
 
 

@@ -79,6 +79,14 @@ bool argParse(string yamlFile, Param& inputParam){
         if(config["svo_file"])
             inputParam.svoFile = config["svo_file"].as<string>();
 
+        if (config["tsdf"]["voxel_size"])
+            inputParam.TSDF_VOXEL_SIZE = config["tsdf"]["voxel_size"].as<float>();
+
+        if (config["tsdf"]["trunc"])
+            inputParam.TSDF_TRURC= config["tsdf"]["trunc"].as<float>();
+
+        if (config["tsdf"]["block_count"])
+            inputParam.TSDF_BLOCK_COUNT= config["tsdf"]["block_count"].as<float>();
 
         return true;
     }  catch (YAML::Exception  &e){
@@ -89,18 +97,21 @@ bool argParse(string yamlFile, Param& inputParam){
 
 int main(int argc, char ** argv){
     // Parameter parsing
+
     Param initParam;
-    if (argc > 1){
-        string configFile(argv[1]);
-        if (! argParse(configFile, initParam))
+    {
+        ElapseMonitor monitor("YAML parsing");
+        if (argc > 1){
+            string configFile(argv[1]);
+            if (! argParse(configFile, initParam))
+                return 0;
+
+        }else{
+            cerr << "no config file given. Provide config.yaml" << endl;
             return 0;
+        }
 
-    }else{
-        cerr << "no config file given. Provide config.yaml" << endl;
-        return 0;
     }
-
-
     // OPENGL
     string shaderDir = initParam.shaderDir;
     render_utils::Param param;
@@ -159,9 +170,9 @@ int main(int argc, char ** argv){
    auto volumePtr = (new o3d_tensor::TSDFVoxelGrid({{"tsdf", open3d::core::Dtype::Float32},
                                                 {"weight", open3d::core::Dtype::UInt16},
                                                 {"color", open3d::core::Dtype::UInt16}},
-                                               0.07,  0.4f, 16,
-                                               50000, device_gpu));
-
+                                               initParam.TSDF_VOXEL_SIZE,
+                                               initParam.TSDF_TRURC, 16,
+                                               initParam.TSDF_BLOCK_COUNT, device_gpu));
 
    auto extrinsicO3dTensor = o3d_core::Tensor::Eye(4,o3d_core::Float64,device_gpu); // todo from ZED
    shared_ptr<o3d_legacy::Image> renderImagePtr = make_shared<o3d_legacy::Image>();
