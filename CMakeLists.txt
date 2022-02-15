@@ -3,10 +3,10 @@ PROJECT(SEE_WITH_YOU)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 message("${CMAKE_MODULE_PATH}")
+set(USER_NAME "JBS")
+set(BUILD_TEST True)
 
-# Dependencies
-################################################################################
-set(USER_NAME "junbs")
+message("Current build type: ${CMAKE_BUILD_TYPE}")
 # In case WIN32,
 # we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
 # Change name Open3D_3rdparty_tbb_tbb_static to tbb_static
@@ -66,25 +66,24 @@ endif()
 
 
 # FOR ARGUMENT PARSING
-find_package(YAML-CPP REQUIRED)
-
-
+find_package(yaml-cpp REQUIRED)
 
 # SEE_WITH_YOU
 ###############################################################################
 include_directories(./include)
-
-add_library(ZedWrapper src/ZedUtils.cpp src/Misc.cpp )
-target_link_libraries(ZedWrapper ${ZED_LIBS} ${Open3D_LIBRARIES})
-
-
-# UNIT TESTING
-###############################################################################
 add_subdirectory(googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
+link_libraries( ${ZED_LIBS} ${Open3D_LIBRARIES}  ${CUDA_LIBRARIES} yaml-cpp)
+add_library(ZedWrapper  src/ZedUtils.cpp src/Misc.cpp )
+
+# UNIT TESTING
+###############################################################################
+
+if(BUILD_TEST)
 add_executable(ZedTest test/Zed.cpp)
 target_link_libraries(ZedTest ZedWrapper gtest_main)
+endif()
 
 if(WIN32)
     get_target_property(open3d_type Open3D::Open3D TYPE)

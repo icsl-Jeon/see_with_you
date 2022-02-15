@@ -10,6 +10,7 @@ If we want to debug our library, we have to build this in RelWithDebInfo. The re
 * OPENCV 4.5.4
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp): This should be built in RelWithDebInfo to cater both Release and RelWithDebInfo. 
 Found that if this is built in Debug, this `LoadFile` function works only when in Debug mode, which is **not possible** for our case.
+Do not forget to include PATH variables: `C:\Program Files (x86)\YAML_CPP\lib` and `C:\Program Files (x86)\YAML_CPP\bin`.
 * [google-test](https://github.com/google/googletest/): We accept the recommendation of developers of Google. Download the master and put it in `./googletest`.  
 
 ## Executables 

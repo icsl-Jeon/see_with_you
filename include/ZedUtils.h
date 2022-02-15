@@ -18,6 +18,8 @@
 #include <open3d/t/geometry/RaycastingScene.h>
 #include <open3d/core/MemoryManager.h>
 #include "Misc.h"
+#include <yaml-cpp/yaml.h>
+
 
 using namespace std;
 
@@ -79,8 +81,7 @@ namespace zed_utils {
     public:
         /// \brief Initialize starting params for camera from users
         /// \param parameterFilePath yaml file
-        /// \param svoFileDir if not empty, it will open svo file
-        CameraParam(string parameterFilePath, string svoFileDir);
+        CameraParam(string parameterFilePath);
 
         /// \brief
         /// \param zed

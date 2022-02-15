@@ -7,7 +7,28 @@
 using namespace std;
 using namespace zed_utils;
 
-CameraParam::CameraParam(string parameterFilePath, string svoFileDir) {
+CameraParam::CameraParam(string parameterFilePath) {
+
+    // parameter parsing
+    try{
+        YAML::Node config = YAML::LoadFile(parameterFilePath);
+        if(config["svo_file"]){
+            string svoFile = config["svo_file"].as<string>();
+
+            if (! svoFile.empty()) {
+                cout << "SVO file given: " << svoFile << endl;
+                initParameters->input.setFromSVOFile(svoFile.c_str());
+                isSvo = true;
+            }
+            else
+                initParameters->camera_resolution = sl::RESOLUTION::HD720; // TODO: param
+
+        }else
+            initParameters->camera_resolution = sl::RESOLUTION::HD720;
+    } catch (YAML::Exception  &e){
+        cerr << "error when opening yaml config" << endl;
+    }
+
     // todo
     initParameters = new sl::InitParameters;
     detectionParameters = new sl::ObjectDetectionParameters;
@@ -15,11 +36,6 @@ CameraParam::CameraParam(string parameterFilePath, string svoFileDir) {
     objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
     positionalTrackingParameters = new sl::PositionalTrackingParameters;
 
-    if (! svoFileDir.empty())
-        initParameters->input.setFromSVOFile(svoFileDir.c_str());
-    else
-        initParameters->camera_resolution = sl::RESOLUTION::HD720;
-    isSvo = true;
 
     initParameters->coordinate_units = sl::UNIT::METER;
     initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
