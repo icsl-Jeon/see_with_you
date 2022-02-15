@@ -5,191 +5,87 @@
 #include <SceneInterpreter.h>
 
 
+map<string,float> misc::ElapseMonitor::monitorResult = map<string,float>();
 
 namespace iswy{
 
-    ElapseMonitor::~ElapseMonitor(){
-        elapseMeasured = timerPtr->stop();
-        delete timerPtr;
-        auto it  = monitorResult.find(tag);
-        if (it != monitorResult.end()) // exist
-            it->second = elapseMeasured;
-        else
-            monitorResult.insert({tag,elapseMeasured});
-        printf("(%s) recorded elapse time %.4f \n", tag.c_str(),elapseMeasured);
+
+
+    Gaze::Gaze(const sl::ObjectData &humanObject) {
+        // todo transformation was not considered
+        auto keypoint = humanObject.keypoint;
+        sl::float3 landMarks[3] = {keypoint[int(sl::BODY_PARTS::LEFT_EYE)],
+                                   keypoint[int(sl::BODY_PARTS::RIGHT_EYE)],
+                                   keypoint[int(sl::BODY_PARTS::NOSE)]};
+        vector<Eigen::Vector3f> landMarksVec(3);
+
+        // root
+        root.setZero();
+        for (int i = 0; i < 3 ; i++){
+            landMarksVec[i] = Eigen::Vector3f(landMarks[i].x,
+                                              landMarks[i].y,
+                                              landMarks[i].z);
+            root+=landMarksVec[i];
+        }
+        root /= 3.0;
+
+        // direction
+        Eigen::Vector3f nose2eyes[2] = {
+                landMarksVec[0] - landMarksVec[2], // left
+                landMarksVec[1] - landMarksVec[2] // right
+        };
+        direction = nose2eyes[0].cross(nose2eyes[1]);
+        direction.normalize();
+
+        // transformation
+        Eigen::Vector3f ex = (landMarksVec[1] - landMarksVec[0]); ex.normalize();
+        Eigen::Vector3f ez = direction;
+        Eigen::Vector3f ey = ez.cross(ex); ey.normalize();
+        transformation = Eigen::Matrix4f::Identity();
+        transformation.block(0,3,3,1) = root; // translation
+        transformation.block(0,2,3,1) = direction; // ez
+        transformation.block(0,0,3,1) = ex; // from left to right
+        transformation.block(0,1,3,1) = ey;
+
+        // down from normal vector of eyes - nose
+        float noseDownAngle = 45 * M_PI / 180.0;
+        Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+        Eigen::Matrix2f R;
+        R << cos(noseDownAngle) , sin(noseDownAngle) ,
+                -sin(noseDownAngle) , cos(noseDownAngle);
+        T.block(1,1,2,2) = R;
+        transformation = transformation * T;
+        direction = transformation.block(0,2,3,1);
     }
 
-    void INThandler(int sig){
-        signal(sig, SIG_IGN);
-        printf("exiting while loop");
-        activeWhile = false;
-    }
-
-    map<string,float> ElapseMonitor::monitorResult = map<string,float>();
-
-    /**
-     * Initialize the zed params from yaml file
-     * @param paramterFilePath
-     */
-    CameraParam::CameraParam(string paramterFilePath, string svoFileDir) {
-        // todo
-        initParameters = new sl::InitParameters;
-        detectionParameters = new sl::ObjectDetectionParameters;
-        runtimeParameters = new sl::RuntimeParameters;
-        objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
-        positionalTrackingParameters = new sl::PositionalTrackingParameters;
-
-        if (! svoFileDir.empty())
-            initParameters->input.setFromSVOFile(svoFileDir.c_str());
-        else
-            initParameters->camera_resolution = sl::RESOLUTION::HD720;
-        isSvo = true;
-
-        initParameters->coordinate_units = sl::UNIT::METER;
-        initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
-        initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
-        initParameters->depth_maximum_distance = 7.0;
-        initParameters->depth_minimum_distance = 0.1;
-
-        detectionParameters->detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
-        detectionParameters->enable_tracking = true;
-        detectionParameters->enable_body_fitting = true;
-        detectionParameters->enable_mask_output = true;
-
-        runtimeParameters->confidence_threshold = 50;
-        positionalTrackingParameters->enable_area_memory = true;
-    }
-
-    Eigen::Matrix3d CameraParam::getCameraMatrix() const {
-        Eigen::Matrix3d camMat;
-        camMat.setIdentity();
-        camMat(0,0) = fx;
-        camMat(1,1) = fy;
-        camMat(0,2) = cx;
-        camMat(1,2) = cy;
-
-        return camMat;
+    Eigen::Matrix4f Gaze::getTransformation() const {
+        return transformation;
     }
 
 
-    /**
-     * 1. open zed camera from initialization parameter
-     * 2. fill intrinsic parameters
-     * 3. initialize image data
-     * @param zed
-     * @return
-     */
-    bool CameraParam::open(ZedState& zed) {
+    bool Gaze::isValid()  const {
+        return !(isinf(transformation.norm()) || isnan(transformation.norm())) ;
+    }
 
-        // open camera
-        auto returned_state = zed.camera.open(*initParameters);
-        if (returned_state != sl::ERROR_CODE::SUCCESS) {
-            printf("Enabling positional tracking failed: \n");
-            return false;
+    float Gaze::measureAngleToPoint(const Eigen::Vector3f &point) const {
+        if (! this->isValid()){
+            printf("[Gaze] gaze is not valid. But angle-measure requested. Returning inf\n");
+            return INFINITY;
         }
 
-        returned_state = zed.camera.enablePositionalTracking();
-        if(returned_state != sl::ERROR_CODE::SUCCESS) {
-            printf("Enabling positional tracking failed: \n");
-            zed.camera.close();
-            return false;
-        }
-
-        returned_state = zed.camera.enableObjectDetection(detectionParameters);
-        if(returned_state != sl::ERROR_CODE::SUCCESS) {
-            printf("Enabling object detection failed: \n");
-            zed.camera.close();
-            return false;
-        }
-
-        returned_state = zed.camera.enablePositionalTracking(*positionalTrackingParameters);
-        if(returned_state != sl::ERROR_CODE::SUCCESS) {
-            printf("Enabling position tracking failed: \n");
-            zed.camera.close();
-            return false;
-        }
-
-        sl::CameraConfiguration intrinsicParam = zed.camera.getCameraInformation().camera_configuration;
-        fx = intrinsicParam.calibration_parameters.left_cam.fx;
-        fy = intrinsicParam.calibration_parameters.left_cam.fy;
-        cx = intrinsicParam.calibration_parameters.left_cam.cx;
-        cy = intrinsicParam.calibration_parameters.left_cam.cy;
-        width = zed.camera.getCameraInformation().camera_resolution.width;
-        height = zed.camera.getCameraInformation().camera_resolution.height;
-
-        // initialize image matrix
-        zed.image.alloc(width,height, sl::MAT_TYPE::U8_C4,  sl::MEM::GPU);
-        zed.depth.alloc(width,height, sl::MAT_TYPE::F32_C1, sl::MEM::GPU);
-
-        return true;
+        Eigen::Vector3f viewVector = (point - root); viewVector.normalize();
+        return atan2(viewVector.cross(direction).norm(), viewVector.dot(direction));
     }
 
-    bool ZedState::grab(const CameraParam& runParam) {
 
-        ElapseMonitor monitor("Grab {rgb,depth,object}");
+    tuple<Eigen::Vector3f,Eigen::Vector3f> Gaze::getGazeLineSeg(float length)  const{
+        auto p1 = root;
+        auto p2 = p1 + direction * length;
+        return make_tuple(p1,p2);
 
-        bool isOk;
-        auto rtParam = runParam.getRtParam();
-        if (camera.grab(rtParam) == sl::ERROR_CODE::SUCCESS) {
-            isOk = true;
-        } else if (camera.grab(rtParam) == sl::ERROR_CODE::END_OF_SVOFILE_REACHED) {
-            printf("SVO reached end. Replay. \n");
-            camera.setSVOPosition(1);
-            isOk = true;
-        } else {
-            printf("Grab failed. \n");
-            isOk = false;
-        }
-
-        // update states
-        camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::GPU);
-        camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::GPU);
-        camera.retrieveObjects(humans,runParam.getObjRtParam());
-        camera.getPosition(pose);
-
-        if (! humans.object_list.empty())
-            actor = humans.object_list[0];
-
-        return isOk;
-    }
-
-    Eigen::Matrix4f ZedState::getPoseMat() const {
-        auto transform = sl::Transform();
-        Eigen::Matrix<float,3,1> transl(pose.pose_data.getTranslation().v);
-
-        Eigen::Matrix3f rot = Eigen::Map<Eigen::Matrix<float,3,3,Eigen::RowMajor> >(
-                pose.pose_data.getOrientation().getRotationMatrix().r);
-        Eigen::Matrix4f poseMat;
-        poseMat.setIdentity();
-        poseMat.block(0,0,3,3) = rot;
-        poseMat.block(0,3,3,1) = transl;
-//        cout << poseMat << endl;
-        return poseMat;
-    }
-
-    bool ZedState::markHumanPixels(cv::cuda::GpuMat &maskMat) {
-        if (humans.object_list.empty())
-            return false;
-        auto human_bb_min = actor.bounding_box_2d[0];
-        auto human_bb_max = actor.bounding_box_2d[2];
-        int w = human_bb_max.x - human_bb_min.x;
-        int h = human_bb_max.y - human_bb_min.y;
-
-        cv::Mat subMaskCpu = zed_utils::slMat2cvMat(actor.mask);
-        cv::cuda::GpuMat subMask; subMask.upload(subMaskCpu);
-        cv::Range rowRangeHuman(human_bb_min.y,human_bb_max.y);
-        cv::Range colRangeHuman(human_bb_min.x,human_bb_max.x);
-
-        auto subPtr = maskMat(rowRangeHuman,colRangeHuman);
-        subMask.copyTo(subPtr);
+    }; // p1 ~ p2
 
 
-        return true;
-    }
-
-    /**
-     * Bind memory in gpu (device)
-     */
     void SceneInterpreter::bindDevice() {
         if (! (zedState.camera.isOpened() && (zedState.image.getWidth() > 0) &&  (zedState.image.getHeight() > 0) ))
             throw error::ZedException("Initialize zed camera first, then bind!");
@@ -199,6 +95,9 @@ namespace iswy{
         deviceData.bgDepthCv = cv::cuda::createContinuous(deviceData.depthCv.size(),CV_32FC1); // pixels of obj + human = NAN
 
         // opencv gpu - open3d
+
+
+
     }
 
     SceneInterpreter::SceneInterpreter() : zedParam("",""){
@@ -228,7 +127,7 @@ namespace iswy{
     }
 
 
-    void SceneInterpreter::cameraThread() {
+    void SceneInterpreter::perceptionThread() {
 
         signal(SIGINT, INThandler);
 
@@ -431,14 +330,14 @@ namespace iswy{
             obj.className =paramDetect.classNames[classIds[idx] ];
 
             // calculating mask
-            obj.findMe(deviceData.depthCv,paramDetect,zedParam);
+            obj.findPosFromDepth(deviceData.depthCv, paramDetect, zedParam);
 
             detectedObjects.emplace_back(obj);
         }
     }
 
-    void DetectedObject::findMe(const cv::cuda::GpuMat &depth,
-                                ObjectDetectParam param, CameraParam camParam) {
+    void DetectedObject::findPosFromDepth(const cv::cuda::GpuMat &depth,
+                                          param::ObjectDetectParam param, zed_utils::CameraParam camParam) {
         // find the pixels of this object
         cv::Mat depthBB; depth(boundingBox).download(depthBB);
 
@@ -603,7 +502,7 @@ namespace iswy{
         }
     }
 
-    void SceneInterpreter::visThread() {
+    void SceneInterpreter::visualThread() {
 
         // vis - opencv init
         cv::namedWindow(paramVis.nameImageWindow, cv::WINDOW_KEEPRATIO );

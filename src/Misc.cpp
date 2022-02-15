@@ -3,8 +3,20 @@
 //
 
 #include <Misc.h>
+
+
 namespace  misc {
 
+    ElapseMonitor::~ElapseMonitor(){
+        elapseMeasured = timerPtr->stop();
+        delete timerPtr;
+        auto it  = monitorResult.find(tag);
+        if (it != monitorResult.end()) // exist
+            it->second = elapseMeasured;
+        else
+            monitorResult.insert({tag,elapseMeasured});
+        printf("(%s) recorded elapse time %.4f \n", tag.c_str(),elapseMeasured);
+    }
 
     void drawPred(string className, float conf, float x, float y, float z ,int left, int top, int right, int bottom, cv::Mat &frame) {
         cv::rectangle(frame, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 255, 0),2);

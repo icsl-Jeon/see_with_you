@@ -1,8 +1,8 @@
-//
-// Created by jbs on 21. 10. 31..
-//
-
-// todo yaml parameterize
+/**
+ * SceneInterpret receives the camera sensing data and reconstruct the following information
+ * 1. OOIs (meshes + attention score)
+ * 2. Environment spatial mapping (currently mesh)
+ */
 
 #ifndef ZED_OPEN3D_SCENEINTERPRETER_H
 #define ZED_OPEN3D_SCENEINTERPRETER_H
@@ -12,204 +12,205 @@
 #include <Open3dUtils.h>
 #include <Misc.h>
 #include <mutex>
-#include "opencv2/cudaarithm.hpp"
 
-
+//////////////////////////////////////////////
 using namespace std;
-
-static bool activeWhile = true;
-
+namespace o3d_core = open3d::core;
+namespace o3d_tensor =  open3d::t::geometry ;
+//////////////////////////////////////////////
 
 namespace iswy { // i see with you
-    struct ElapseMonitor {
-        static map<string,float> monitorResult;
-        float elapseMeasured =-1 ;
-        string tag;
-        misc::Timer* timerPtr;
 
-        ElapseMonitor(string tag): tag(tag) {
-            timerPtr = new misc::Timer();
-        }
-        ~ElapseMonitor();
-    };
+    ///////////////////////////////////////////////////////////
+    //                     Parameters                        //
+    //////////////////////////////////////////////////////////
 
-
-    void INThandler(int sig);
-
-    struct SceneParam {
-
-
-    };
-    // visualization with open3d and opencv ...
-    struct VisParam{
-        string nameImageWindow = "image perception";
-        float objectPixelAlpha = 0.5;
-
-        int const attentionColors[4][3] = {{51,51,255}, {0,128,255}, {0,255,255},{51,255,51}}; // BGR
-
-    };
-
-
-    struct CameraParam;
-
-    struct ZedState{ // raw camera state
-
-        sl::Pose pose;
-        sl::Mat image;
-        sl::Mat depth;
-        sl::Objects humans;
-        sl::ObjectData actor;
-
-        sl::Camera camera;
-
-
-        bool grab(const CameraParam & runParam);
-        bool markHumanPixels (cv::cuda::GpuMat& maskMat);
-        Eigen::Matrix4f getPoseMat() const;
-    };
-
-    struct CameraParam{
-    private:
-        bool isSvo = true;
-        // these will be filled once camera opened !
-        float fx;
-        float fy;
-        float cx;
-        float cy;
-        int width;
-        int height;
-        sl::InitParameters* initParameters;
-        sl::ObjectDetectionParameters* detectionParameters;
-        sl::RuntimeParameters* runtimeParameters;
-        sl::ObjectDetectionRuntimeParameters* objectDetectionRuntimeParameters;
-        sl::PositionalTrackingParameters* positionalTrackingParameters;
-
-    public:
-        CameraParam(string paramterFilePath,string svoFileDir);
-        bool open(ZedState& zed);
-        sl::RuntimeParameters getRtParam() const {return *runtimeParameters;};
-        sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return *objectDetectionRuntimeParameters;}
-        sl::PositionalTrackingParameters getPoseParam() const {return *positionalTrackingParameters;}
-        cv::Size getCvSize() const {return cv::Size(width,height);};
-        cv::Point2f project(const Eigen::Vector3f& pnt) const{
-            return {fx*pnt.x()/pnt.z() + cx, fx*pnt.y()/pnt.z() + cy};};
-        inline void unProject (cv::Point uv, float depth, float& xOut, float& yOut, float & zOut) const{
-            zOut = depth;
-            xOut = (uv.x - cx) * depth / fx;
-            yOut = (uv.y - cy) * depth / fy;
+    namespace param {
+        // visualization with open3d and opencv ...
+        struct VisParam{
+            string nameImageWindow = "image perception";
+            float objectPixelAlpha = 0.5;
+            int const attentionColors[4][3] = {{51,51,255}, {0,128,255}, {0,255,255},{51,255,51}}; // BGR
         };
-        Eigen::Matrix3d getCameraMatrix() const ;
-        open3d::core::Tensor getO3dIntrinsicTensor(
-                open3d::core::Device dType = open3d::core::Device("CUDA:0")) const;
 
-    };
+        struct AttentionParam{
+            int ooi = 39; // bottle
+            float gazeFov = M_PI /3.0 *2.0; // cone (height/rad) = tan(gazeFov/2)
+            float gazeImportance = 0.4;
+        };
 
+        struct ObjectDetectParam{
+            string rootDir = "/home/jbs/lib/see_with_you/param/";
+            string modelConfig = rootDir + "yolov4.cfg";
+            string modelWeight = rootDir + "yolov4.weights";
+            string classNameDir = rootDir + "coco.names";
+            vector<string> classNames;
+            float confidence = 0.2;
+            float nmsThreshold = 0.2;
+            float objectDepthMin = 0.01;
+            float objectDepthMax = 5.0;
+            float objectDimensionAlongOptical = 1.0;
+        };
 
-    struct AttentionParam{
-        int ooi = 39; // bottle
-        float gazeFov = M_PI /3.0 *2.0; // cone (height/rad) = tan(gazeFov/2)
-        float gazeImportance = 0.4;
-    };
+        struct MappingParam{
+            float tsdfVoxelSize = 0.015;
+            float tsdfTrunc = 0.04;
+            float tsdfBlockCount = 1000;
+        };
+    }
 
+    ///////////////////////////////////////////////////////////
+    //               Managing sensor data                    //
+    //////////////////////////////////////////////////////////
 
-    struct ObjectDetectParam{
-        string rootDir = "/home/jbs/lib/see_with_you/param/";
-        string modelConfig = rootDir + "yolov4.cfg";
-        string modelWeight = rootDir + "yolov4.weights";
-        string classNameDir = rootDir + "coco.names";
-        vector<string> classNames;
-        float confidence = 0.2;
-        float nmsThreshold = 0.2;
-        float objectDepthMin = 0.01;
-        float objectDepthMax = 5.0;
-        float objectDimensionAlongOptical = 1.0;
-    };
-
-    struct humanDetectParam{
-
-    };
-
-    struct DetectedObject{
-        cv::Rect boundingBox;
-//        cv::cuda::GpuMat mask; // 255 masking in the bounding box
-        cv::Mat mask_cpu; // 255 masking in the bounding box
-        int classLabel;
-        string className;
-        float confidence ;
-        Eigen::Vector3f centerPoint;
-
-        void drawMe (cv::Mat& image,float alpha ,int ooi) const;
-        void findMe (const cv::cuda::GpuMat& depth,
-                     ObjectDetectParam param, CameraParam camParam );
-
-        float attentionCost = INFINITY;
-        void updateAttentionCost (float cost) {attentionCost = cost; }
-
-    };
-
-    struct AttentionEvaluator{
-        zed_utils::Gaze gaze;
-        Eigen::Vector3f leftHand; // left hand location
-        Eigen::Vector3f rightHand; // right hand location
-        float evalAttentionCost(DetectedObject& object, AttentionParam param, bool updateObject = true);
-        bool isValid() {return (! isnan(leftHand.norm()) && (! isnan(leftHand.norm())) && gaze.isValid()); }
-        void drawMe (cv::Mat& image, CameraParam camParam); // todo extrinsic
-    };
-
-    struct VisOpenCv{
-        cv::Mat image;
-        vector<DetectedObject> curObjVis; // renewed from update thread
-
-
-    };
-
+    /// \brief Shared resource for extracting sensing information
     struct DeviceData{
-        // raw image bound with ZED
+
+        DeviceData() = default;
+
+        // data type for open3d
+        o3d_core::Device device_gpu = o3d_core::Device("CUDA:0");
+        o3d_core::Device device_cpu = o3d_core::Device("CPU:0");
+        o3d_core::Dtype rgbType = o3d_core::Dtype::UInt8;
+        o3d_core::Dtype depthType = o3d_core::Dtype::Float32;
+
+        // opencv image bound with ZED
         cv::cuda::GpuMat imageCv;
         cv::cuda::GpuMat imageCv3ch;
         cv::cuda::GpuMat depthCv;
         cv::cuda::GpuMat fgMask; // {human, objects} = 255
         cv::cuda::GpuMat bgDepthCv; // depth - {human, objects}
+
+        // open3d image bound with opencv image
+        shared_ptr<o3d_core::Blob> rgbBlob;
+        shared_ptr<o3d_core::Blob> depthBlob;
+        o3d_core::Tensor imageO3d;
+        o3d_core::Tensor depthO3d;
+
+        // open3d volumetric TSDF
+        o3d_tensor::TSDFVoxelGrid* volumePtr;
+    };
+
+    /// \brief  Raw camera sensing data
+    struct Camera{
+        bool isGrab = false;
+        DeviceData deviceData; /// Raw data in gpu
+        // Core sensing data. They should be bound each other for shallow copy
+        zed_utils::CameraParam zedParam;
+        zed_utils::ZedState zedState; /// sensor raw data
+
+        void bindDevice();
+    };
+
+    /// \brief Detect various objects
+    struct Detector{
+
+        param::ObjectDetectParam paramDetect;
+        cv::dnn::Net net;
+        void detect();
+
+
     };
 
 
-    class SceneInterpreter {
+    ///////////////////////////////////////////////////////////
+    //           objects extracted from sensing              //
+    //////////////////////////////////////////////////////////
+
+
+    struct DetectedObject{
+        cv::Rect boundingBox; /// assuming the image size does not change
+//        cv::cuda::GpuMat mask; /// 255 masking in the bounding box
+        cv::Mat mask_cpu; /// 255 masking in the bounding box
+        int classLabel; /// follows yolo labeling  (cfg)
+        string className;
+        float confidence;
+        Eigen::Vector3f centerPoint; /// w.r.t world coordinate
+        float attentionCost = INFINITY; /// degree of interest from actor
+
+        /// \brief Overlay the mask for object with coloring mapped to attention cost
+        /// \param image target image for overlay
+        /// \param alpha transparency.
+        /// \param ooi 
+        void drawMe (cv::Mat& image,float alpha ,int ooi) const;
+
+        /// \brief finding position of the object based on the depth image and bounding box
+        /// \param depth
+        /// \param param
+        /// \param camParam
+        void findPosFromDepth (const cv::cuda::GpuMat& depth,
+                               param::ObjectDetectParam param, zed_utils::CameraParam camParam );
+    };
+
+
+    class Gaze{
     private:
-        bool isGrab = false;
-        bool imshowWindowOpened = false;
-        mutex mutex_; // mutex between cameraThread and vis thread
-        // visualizers
-        VisOpenCv visOpenCv;
-        VisParam paramVis;
+        Eigen::Vector3f root;
+        Eigen::Vector3f direction; // to be normalized
+        Eigen::Matrix4f transformation; // z: normal outward from face, x: left eye to right eye (w.r.t actor)
 
-        // detector
-        ObjectDetectParam paramDetect;
-        cv::dnn::Net net;
-        vector<DetectedObject> detectedObjects;
-        void detect();
+    public:
+        Gaze() = default;
+        Gaze(const sl::ObjectData& humanObject);
+        Eigen::Matrix4f getTransformation() const;
+        bool isValid() const ;
+        float measureAngleToPoint(const Eigen::Vector3f & point) const;
+        tuple<Eigen::Vector3f,Eigen::Vector3f> getGazeLineSeg(float length)  const; // p1 ~ p2
 
-        // zed
-        CameraParam zedParam;
-        ZedState zedState;
+    };
 
-        // attention
-        AttentionParam paramAttention;
-        AttentionEvaluator attention;
+    struct Actor{
+        Gaze gaze;
+        Eigen::Vector3f leftHand; // left hand location
+        Eigen::Vector3f rightHand; // right hand location
+        float evalAttentionCost(DetectedObject& object, param::AttentionParam param, bool updateObject = true);
+        bool isValid() {return (! isnan(leftHand.norm()) && (! isnan(leftHand.norm())) && gaze.isValid()); }
+        void drawMe (cv::Mat& image, zed_utils::CameraParam camParam); // todo extrinsic
+    };
+
+
+    ///////////////////////////////////////////////////////////
+    //                      Visualizer                      //
+    //////////////////////////////////////////////////////////
+
+    /// \brief visualize the belows:
+    /// 1. Detection of objects with score coloring
+    /// 2. Actor tracking and its skeleton
+    struct Visualizer{
+        param::VisParam param_;
+
+
         void drawAttentionScores(cv::Mat& image, const vector<DetectedObject>& objs) const;
 
-        // variables in device
-        DeviceData deviceData;
+    };
 
-        void bindDevice();
+
+    ///////////////////////////////////////////////////////////
+    //                 Integrated processor                  //
+    //////////////////////////////////////////////////////////
+
+    /// \brief Process the incoming data for framing evaluation
+    class SceneInterpreter {
+    private:
+        // Sensing
+        Camera camera; /// Receives RGB + Depth and perform spatial mapping
+        Detector detector; /// Extract OOIs
+
+        // Extracted foreground objects
+        vector<DetectedObject> detectedObjects;
+        Actor detectedActor;
+
+        // Misc pipeline
+        mutex mutex_; // mutex between perceptionThread and vis thread
+        Visualizer visualizer;
+
         void forwardToVisThread();
         void visualize();
 
-
-
     public:
         SceneInterpreter();
-        void cameraThread();
-        void visThread();
+        void perceptionThread();
+        void visualThread();
         ~SceneInterpreter() {};
     };
 

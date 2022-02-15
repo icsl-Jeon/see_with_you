@@ -14,27 +14,15 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <tuple>
+#include <open3d/Open3D.h>
+#include <open3d/t/geometry/RaycastingScene.h>
+#include <open3d/core/MemoryManager.h>
+#include "Misc.h"
 
 using namespace std;
 
 namespace zed_utils {
     using namespace sl;
-
-    class Gaze{
-    private:
-        Eigen::Vector3f root;
-        Eigen::Vector3f direction; // to be normalized
-        Eigen::Matrix4f transformation; // z: normal outward from face, x: left eye to right eye (w.r.t actor)
-
-    public:
-        Gaze() = default;
-        Gaze(const sl::ObjectData& humanObject);
-        Eigen::Matrix4f getTransformation() const;
-        bool isValid() const ;
-        float measureAngleToPoint(const Eigen::Vector3f & point) const;
-        tuple<Eigen::Vector3f,Eigen::Vector3f> getGazeLineSeg(float length)  const; // p1 ~ p2
-
-    };
 
     bool parseArgs(int argc, char **argv, sl::InitParameters &param);
 
@@ -49,7 +37,79 @@ namespace zed_utils {
     void print(string msg_prefix, ERROR_CODE err_code, string msg_suffix);
 
 
-    
+    struct CameraParam;
+
+    /// \brief Wrapping structure for sl- objects (raw data from ZED SDK)
+    struct ZedState{ // raw camera state
+
+        sl::Camera camera;
+
+        sl::Pose pose;
+        sl::Mat image;
+        sl::Mat depth;
+        sl::Objects humans;
+        sl::ObjectData actor;
+
+        bool grab(const CameraParam & runParam);
+        bool markHumanPixels (cv::cuda::GpuMat& maskMat);
+        Eigen::Matrix4f getPoseMat() const;
+    };
+
+    /// \brief This opens zed sl::Camera with given initialization params (from users) and fills camera info
+    /// \details Also, performs simple operation for projection and un-projection
+    struct CameraParam{
+    private:
+        bool isSvo = true;
+
+        // Init params when opening ZED
+        sl::InitParameters* initParameters;
+        sl::ObjectDetectionParameters* detectionParameters;
+        sl::RuntimeParameters* runtimeParameters;
+        sl::ObjectDetectionRuntimeParameters* objectDetectionRuntimeParameters;
+        sl::PositionalTrackingParameters* positionalTrackingParameters;
+
+        // Will be read once camera opened
+        float fx;
+        float fy;
+        float cx;
+        float cy;
+        int width;
+        int height;
+
+    public:
+        /// \brief Initialize starting params for camera from users
+        /// \param parameterFilePath yaml file
+        /// \param svoFileDir if not empty, it will open svo file
+        CameraParam(string parameterFilePath, string svoFileDir);
+
+        /// \brief
+        /// \param zed
+        /// \return
+        bool open(ZedState& zed);
+
+        // Simple get- functions
+        sl::RuntimeParameters getRtParam() const {return *runtimeParameters;};
+        sl::ObjectDetectionRuntimeParameters getObjRtParam() const {return *objectDetectionRuntimeParameters;}
+        sl::PositionalTrackingParameters getPoseParam() const {return *positionalTrackingParameters;}
+        cv::Size getCvSize() const {return cv::Size(width,height);};
+        Eigen::Matrix3d getCameraMatrix() const ;
+        open3d::core::Tensor getO3dIntrinsicTensor(
+                open3d::core::Device dType = open3d::core::Device("CUDA:0")) const;
+
+        /// \brief project 3D point in world frame to the camera image
+        /// \param pnt
+        /// \return pixel (u,v) in the image
+        cv::Point2f project(const Eigen::Vector3f& pnt) const;
+
+        /// \brief reconstruct 3D point when pixel and depth are given
+        /// \param uv
+        /// \param depth
+        /// \param xOut
+        /// \param yOut
+        /// \param zOut
+        void unProject (cv::Point uv, float depth, float& xOut, float& yOut, float & zOut) const;
+
+    };
 }
 
 #endif //ZED_OPEN3D_ZEDUTILS_H

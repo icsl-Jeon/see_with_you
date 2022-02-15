@@ -14,12 +14,14 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <map>
 #include <sstream>
 #include <signal.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/cudaimgproc.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 using namespace std::chrono;
 using namespace std;
@@ -127,6 +129,18 @@ namespace misc {
 
     };
 
+    struct ElapseMonitor {
+        static map<string,float> monitorResult;
+        float elapseMeasured =-1 ;
+        string tag;
+        misc::Timer* timerPtr;
+
+        ElapseMonitor(string tag): tag(tag) {
+            timerPtr = new misc::Timer();
+        }
+        ~ElapseMonitor();
+    };
 
 }
+
 #endif //ZED_OPEN3D_MISC_H

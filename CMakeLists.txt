@@ -3,10 +3,10 @@ PROJECT(SEE_WITH_YOU)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 message("${CMAKE_MODULE_PATH}")
-set(USER_NAME "junbs")
 
-message("Current build type: ${CMAKE_BUILD_TYPE}")
-message("CMAKE PREFIX PATH ${CMAKE_PREFIX_PATH}")
+# Dependencies
+################################################################################
+set(USER_NAME "junbs")
 # In case WIN32,
 # we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
 # Change name Open3D_3rdparty_tbb_tbb_static to tbb_static
@@ -64,26 +64,27 @@ else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
+
 # FOR ARGUMENT PARSING
 find_package(YAML-CPP REQUIRED)
 
+
+
 # SEE_WITH_YOU
+###############################################################################
 include_directories(./include)
 
-add_executable(RunScene exe/RunScene.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
-target_link_libraries(RunScene PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
-#
-#add_executable(RunVtkTsdf deprecated/TsdfOpenCV.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp )
-#target_link_libraries(RunVtkTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} Open3D::Open3D )
+add_library(ZedWrapper src/ZedUtils.cpp src/Misc.cpp )
+target_link_libraries(ZedWrapper ${ZED_LIBS} ${Open3D_LIBRARIES})
 
-#add_executable(RunOpen3DTsdf deprecated/TsdfOpen3d.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp)
-#target_link_libraries(RunOpen3DTsdf PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} )
 
-add_executable(RunOpen3dOpengl test/TsdfOpen3dOpengl.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
-target_link_libraries(RunOpen3dOpengl PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm yaml-cpp )
+# UNIT TESTING
+###############################################################################
+add_subdirectory(googletest)
+include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-add_executable(RenderVsReal test/RenderVsReal.cpp src/ZedUtils.cpp src/Misc.cpp src/SceneInterpreter.cpp src/Open3dUtils.cpp src/RenderUtils.cpp )
-target_link_libraries(RenderVsReal PRIVATE  ${ZED_LIBS}   ${OpenCV_LIBRARIES}  ${CUDA_LIBRARIES} ${Open3D_LIBRARIES} glm::glm )
+add_executable(ZedTest test/Zed.cpp)
+target_link_libraries(ZedTest ZedWrapper gtest_main)
 
 if(WIN32)
     get_target_property(open3d_type Open3D::Open3D TYPE)
