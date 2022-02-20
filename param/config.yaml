@@ -1,5 +1,5 @@
-shader_root_dir: C:/Users/junbs/OneDrive/Documents/GitHub/see_with_you/include/shader
-svo_file: C:/Users/junbs/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo
+shader_root_dir: C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/include/shader
+svo_file: C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo
 tsdf: # volumetric meshing
   voxel_size: 0.015 # [m]
   trunc: 0.04 # [m]

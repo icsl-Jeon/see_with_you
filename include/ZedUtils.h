@@ -52,6 +52,7 @@ namespace zed_utils {
         sl::Objects humans;
         sl::ObjectData actor;
 
+        bool isCameraOpen() {return camera.isOpened();}
         bool grab(const CameraParam & runParam);
         bool markHumanPixels (cv::cuda::GpuMat& maskMat);
         Eigen::Matrix4f getPoseMat() const;
@@ -83,10 +84,10 @@ namespace zed_utils {
         /// \param parameterFilePath yaml file
         CameraParam(string parameterFilePath);
 
-        /// \brief
+        /// \brief initialize zed sl objects and its data
         /// \param zed
         /// \return
-        bool open(ZedState& zed);
+        bool init(ZedState& zed);
 
         // Simple get- functions
         sl::RuntimeParameters getRtParam() const {return *runtimeParameters;};

@@ -5,21 +5,41 @@
 #include <gtest/gtest.h>
 
 string configFile="";
-TEST(ZED_WRAPPER, SVO_OPEN) {
+
+
+class ZedOpen : public ::testing::Test {
+protected:
+    zed_utils::CameraParam* initParamPtr;
+    zed_utils::ZedState* zedStatePtr;
+    void SetUp() override {
+        initParamPtr = new zed_utils::CameraParam(configFile);
+        zedStatePtr = new zed_utils::ZedState;
+        initParamPtr->init(*zedStatePtr);
+    }
+
+    void TearDown( ) override {
+        delete initParamPtr;
+        delete zedStatePtr;
+    }
+};
+
+TEST_F(ZedOpen, SVO_OPEN) {
     try {
-        zed_utils::CameraParam camParam(configFile);
-        SUCCEED();
+        misc::ElapseMonitor monitor("SVO opening");
+        ASSERT_EQ(zedStatePtr->isCameraOpen(), 1);
     } catch (std::exception const & err) {
         FAIL() << err.what();
     }
 }
+
+
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc,argv);
     if (argc > 1){
         configFile = string(argv[1]);
     }else{
-        cerr << "no config file given. Provide config.yaml" << endl;
+        cerr << "no config file given. For gtesting, provide config.yaml" << endl;
         return 0;
     }
 

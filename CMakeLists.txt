@@ -6,19 +6,6 @@ message("${CMAKE_MODULE_PATH}")
 set(USER_NAME "JBS")
 set(BUILD_TEST True)
 
-message("Current build type: ${CMAKE_BUILD_TYPE}")
-# In case WIN32,
-# we assume that the installation output from INSTALL of VS is collected into the BUILD_DIR.
-# Change name Open3D_3rdparty_tbb_tbb_static to tbb_static
-#IF (${CMAKE_BUILD_TYPE} EQUAL "Release")
-    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Release")
-#ELSEIF(${CMAKE_BUILD_TYPE} EQUAL "RelWithDebInfo")
-#    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/RelWithDebInfo")
-#ELSE()
-#    set(OPEN3D_BUILD_DIR "C:/Users/${USER_NAME}/OneDrive/Documents/window_dev/Open3D_built/Debug")
-#ENDIF()
-include("${OPEN3D_BUILD_DIR}/CMake/Open3DConfig.cmake")
-link_directories("${OPEN3D_BUILD_DIR}/lib")
 
 IF (WIN32)
     # To include eigen in window, set env variables
@@ -46,7 +33,7 @@ message("cuda = ${CUDA_LIBRARIES}")
 SET(ZED_LIBS ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY})
 
 # OPENCV
-find_package(OpenCV 4.5.3 REQUIRED)
+find_package(OpenCV 4.5 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 message(STATUS "OpenCV library status:")
@@ -68,21 +55,28 @@ endif()
 # FOR ARGUMENT PARSING
 find_package(yaml-cpp REQUIRED)
 
-# SEE_WITH_YOU
-###############################################################################
-include_directories(./include)
+
 add_subdirectory(googletest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-link_libraries( ${ZED_LIBS} ${Open3D_LIBRARIES}  ${CUDA_LIBRARIES} yaml-cpp)
-add_library(ZedWrapper  src/ZedUtils.cpp src/Misc.cpp )
 
+# SEE_WITH_YOU
+###############################################################################
+include_directories(./include)
+add_library(ZedWrapper  src/ZedUtils.cpp src/Misc.cpp ) # https://jhnyang.tistory.com/42
+target_link_libraries(ZedWrapper ${ZED_LIBS} ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp)
+
+add_library(SceneInterpreter src/SceneInterpreter.cpp src/RenderUtils.cpp src/Open3dUtils.cpp)
+target_link_libraries(SceneInterpreter ZedWrapper glm::glm)
 # UNIT TESTING
 ###############################################################################
 
 if(BUILD_TEST)
 add_executable(ZedTest test/Zed.cpp)
-target_link_libraries(ZedTest ZedWrapper gtest_main)
+target_link_libraries(ZedTest  gtest_main ZedWrapper)
+
+add_executable(SceneTest test/Scene.cpp)
+target_link_libraries(SceneTest  gtest_main SceneInterpreter)
 endif()
 
 if(WIN32)

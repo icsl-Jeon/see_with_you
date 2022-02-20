@@ -9,9 +9,11 @@ If we want to debug our library, we have to build this in RelWithDebInfo. The re
 * CUDA 11.3 
 * OPENCV 4.5.4
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp): This should be built in RelWithDebInfo to cater both Release and RelWithDebInfo. 
-Found that if this is built in Debug, this `LoadFile` function works only when in Debug mode, which is **not possible** for our case.
-Do not forget to include PATH variables: `C:\Program Files (x86)\YAML_CPP\lib` and `C:\Program Files (x86)\YAML_CPP\bin`.
+Found that if this is built in Debug, this `LoadFile` function works only when in Debug mode, which is **not possible** for our case. Ensure to turn on `BUILD_SHARED_LIBS=TRUE`
+Do not forget to include PATH variables: `C:\Program Files (x86)\YAML_CPP\bin` (for dynamic linking).
 * [google-test](https://github.com/google/googletest/): We accept the recommendation of developers of Google. Download the master and put it in `./googletest`.  
+* [Open3d](https://github.com/icsl-Jeon/Open3D): I modified some code. For Windows, this was built in RelWithDebInfo and installed into 'C:\Program Files (x86)\Open3D'. 
+Add `C:\Program Files (x86)\Open3D` into `PATH` variable. 
 
 ## Executables 
 Recommend run in Release mode. RelWithDebInfo seems to stop with an unknown issue. 

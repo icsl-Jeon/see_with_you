@@ -7,6 +7,10 @@
 
 namespace  misc {
 
+    #ifndef ZED_OPEN3D_MISC_H
+    map<string,float> ElapseMonitor::monitorResult = map<string,float>(); // this should be linked see (http://bitboom.github.io/cpp-static-member-initialization)
+    #endif
+
     ElapseMonitor::~ElapseMonitor(){
         elapseMeasured = timerPtr->stop();
         delete timerPtr;
@@ -15,7 +19,7 @@ namespace  misc {
             it->second = elapseMeasured;
         else
             monitorResult.insert({tag,elapseMeasured});
-        printf("(%s) recorded elapse time %.4f \n", tag.c_str(),elapseMeasured);
+        printf("(%s) recorded elapse time %.4f ms \n", tag.c_str(),elapseMeasured);
     }
 
     void drawPred(string className, float conf, float x, float y, float z ,int left, int top, int right, int bottom, cv::Mat &frame) {

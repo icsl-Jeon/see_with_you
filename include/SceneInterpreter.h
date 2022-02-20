@@ -84,22 +84,27 @@ namespace iswy { // i see with you
         // open3d image bound with opencv image
         shared_ptr<o3d_core::Blob> rgbBlob;
         shared_ptr<o3d_core::Blob> depthBlob;
-        o3d_core::Tensor imageO3d;
-        o3d_core::Tensor depthO3d;
+        o3d_core::Tensor rgbTensor ;
+        o3d_core::Tensor depthTensor ;
+        o3d_tensor::Image imageO3d;
+        o3d_tensor::Image depthO3d;
 
         // open3d volumetric TSDF
         o3d_tensor::TSDFVoxelGrid* volumePtr;
     };
 
-    /// \brief  Raw camera sensing data
+    /// \brief  Raw camera sensing data and its data in gpu
     struct Camera{
+        bool isBound = false;
         bool isGrab = false;
         DeviceData deviceData; /// Raw data in gpu
         // Core sensing data. They should be bound each other for shallow copy
         zed_utils::CameraParam zedParam;
         zed_utils::ZedState zedState; /// sensor raw data
 
-        void bindDevice();
+        Camera(string configFile); /// open camera with config file
+        void bindDevice(); /// binding between sl objects - cv objects - open3d objects in gpu memory
+        bool grab(); /// update device data with incoming sensor
     };
 
     /// \brief Detect various objects
@@ -189,7 +194,11 @@ namespace iswy { // i see with you
     //                 Integrated processor                  //
     //////////////////////////////////////////////////////////
 
-    /// \brief Process the incoming data for framing evaluation
+    /// \brief Process the incoming data for framing evaluation.
+    /// 1. performs rgb + depth camera sensing
+    /// 2. detect objects + actor. Gaze of actor is also estimated.
+    /// 3. Each object is assigned a attention score based on gaze, hands, context
+    /// 4. Volumetric mapping is performed by TSDF
     class SceneInterpreter {
     private:
         // Sensing
@@ -208,10 +217,26 @@ namespace iswy { // i see with you
         void visualize();
 
     public:
-        SceneInterpreter();
+        /// \brief This handles the incoming data for framing evaluation.
+        /// 1. performs rgb + depth camera sensing
+        /// 2. detect objects + actor. Gaze of actor is also estimated.
+        /// 3. Each object is assigned a attention score based on gaze, hands, context
+        /// 4. Volumetric mapping is performed by TSDF
+        SceneInterpreter(string configFile);
+
+        /// \brief Run loop for sensing data
         void perceptionThread();
-        void visualThread();
+
+        /// \brief run visualization by open3d
+        void visualizationThread();
         ~SceneInterpreter() {};
+
+        /// \brief update perception
+        bool grab();
+
+        /// \brief get the latest image in open3d legacy format
+        open3d::geometry::Image getImageO3d() const;
+
     };
 
 }

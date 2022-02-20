@@ -9,6 +9,12 @@ using namespace zed_utils;
 
 CameraParam::CameraParam(string parameterFilePath) {
 
+    initParameters = new sl::InitParameters;
+    detectionParameters = new sl::ObjectDetectionParameters;
+    runtimeParameters = new sl::RuntimeParameters;
+    objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
+    positionalTrackingParameters = new sl::PositionalTrackingParameters;
+
     // parameter parsing
     try{
         YAML::Node config = YAML::LoadFile(parameterFilePath);
@@ -30,13 +36,6 @@ CameraParam::CameraParam(string parameterFilePath) {
     }
 
     // todo
-    initParameters = new sl::InitParameters;
-    detectionParameters = new sl::ObjectDetectionParameters;
-    runtimeParameters = new sl::RuntimeParameters;
-    objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
-    positionalTrackingParameters = new sl::PositionalTrackingParameters;
-
-
     initParameters->coordinate_units = sl::UNIT::METER;
     initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
     initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
@@ -64,7 +63,7 @@ Eigen::Matrix3d CameraParam::getCameraMatrix() const {
 }
 
 
-bool CameraParam::open(ZedState& zed) {
+bool CameraParam::init(ZedState& zed) {
 
     // open camera
     auto returned_state = zed.camera.open(*initParameters);
@@ -105,7 +104,10 @@ bool CameraParam::open(ZedState& zed) {
     // initialize image matrix
     zed.image.alloc(width,height, sl::MAT_TYPE::U8_C4,  sl::MEM::GPU);
     zed.depth.alloc(width,height, sl::MAT_TYPE::F32_C1, sl::MEM::GPU);
-
+    if (width ==0 || height ==0 ){
+        cerr << "camera width = 0 or height = 0. ZedParam cannot be created " << endl;
+        return false;
+    }
     return true;
 }
 
@@ -119,10 +121,12 @@ void CameraParam::unProject (cv::Point uv, float depth, float& xOut, float& yOut
     yOut = (uv.y - cy) * depth / fy;
 };
 
-
+/// Grab {rgb,depth,object,pose} from ZED camera
+/// \param runParam
+/// \return
 bool ZedState::grab(const CameraParam& runParam) {
 
-    misc::ElapseMonitor monitor("Grab {rgb,depth,object}");
+//    misc::ElapseMonitor monitor("Grab {rgb,depth,object}");
 
     bool isOk;
     auto rtParam = runParam.getRtParam();
