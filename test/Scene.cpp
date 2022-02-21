@@ -27,6 +27,7 @@ TEST_F(CameraThread, SVO_OPEN) {
     }
 }
 
+// Run zed camera for rgb + depth and inspect open3d image to check binding
 TEST_F(CameraThread, RUN_CAM) {
     try {
         auto  imageO3dPtr = make_shared<open3d::geometry::Image>();
@@ -66,6 +67,28 @@ TEST_F(CameraThread, RUN_CAM) {
     }
 }
 
+// Run yolo object detections
+TEST_F(CameraThread, OBJECTS_DETECT) {
+    try {
+        cout << "Camera open success !" << endl;
+        cout << "Running camera thread for 20 s...." << endl;
+        auto timer = misc::Timer();
+        float avgElapse = 0;
+        int cnt = 0;
+        while (timer.stop() < 20 * 1E+3){
+            misc::Timer tic;
+            if (!scenePtr->grab()) {
+                FAIL();
+            }
+            avgElapse += tic.stop();
+            cnt ++;
+            sl::sleep_ms(1);
+        }
+
+    } catch (std::exception const & err) {
+        FAIL() << err.what();
+    }
+}
 
 
 

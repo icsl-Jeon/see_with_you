@@ -40,16 +40,19 @@ namespace iswy { // i see with you
         };
 
         struct ObjectDetectParam{
-            string rootDir = "/home/jbs/lib/see_with_you/param/";
-            string modelConfig = rootDir + "yolov4.cfg";
-            string modelWeight = rootDir + "yolov4.weights";
-            string classNameDir = rootDir + "coco.names";
+            bool isActive = true;
+
+            string modelConfig;
+            string modelWeight;
+            string classNameDir;
             vector<string> classNames;
+
             float confidence = 0.2;
             float nmsThreshold = 0.2;
             float objectDepthMin = 0.01;
             float objectDepthMax = 5.0;
             float objectDimensionAlongOptical = 1.0;
+            bool parseFrom(string configFile);
         };
 
         struct MappingParam{
@@ -95,26 +98,28 @@ namespace iswy { // i see with you
 
     /// \brief  Raw camera sensing data and its data in gpu
     struct Camera{
+    private:
         bool isBound = false;
         bool isGrab = false;
         DeviceData deviceData; /// Raw data in gpu
         // Core sensing data. They should be bound each other for shallow copy
         zed_utils::CameraParam zedParam;
         zed_utils::ZedState zedState; /// sensor raw data
-
-        Camera(string configFile); /// open camera with config file
         void bindDevice(); /// binding between sl objects - cv objects - open3d objects in gpu memory
+
+    public:
+        Camera(string configFile); /// open camera with config file
+        open3d::geometry::Image getImageO3d() const;
+        cv::cuda::GpuMat getImageCvCuda() const;
         bool grab(); /// update device data with incoming sensor
     };
 
-    /// \brief Detect various objects
-    struct Detector{
-
+    /// \brief Detect various objects in image and find their pixels and locations (not actor)
+    struct ObjectDetector{
         param::ObjectDetectParam paramDetect;
         cv::dnn::Net net;
-        void detect();
-
-
+        bool detect(const cv::cuda::GpuMat& imageCv3ch);
+        ObjectDetector(string configFile);
     };
 
 
@@ -202,8 +207,8 @@ namespace iswy { // i see with you
     class SceneInterpreter {
     private:
         // Sensing
-        Camera camera; /// Receives RGB + Depth and perform spatial mapping
-        Detector detector; /// Extract OOIs
+        Camera camera; /// Receives RGB + Depth and perform spatial mapping and actor tracking
+        ObjectDetector detector; /// Extract OOIs (not actor)
 
         // Extracted foreground objects
         vector<DetectedObject> detectedObjects;
