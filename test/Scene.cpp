@@ -84,7 +84,8 @@ TEST_F(CameraThread, OBJECTS_DETECT) {
             cnt ++;
             sl::sleep_ms(1);
         }
-
+        cout << "average cam grab + objects detection = " << (avgElapse/cnt) << " ms" << endl;
+        SUCCEED();
     } catch (std::exception const & err) {
         FAIL() << err.what();
     }

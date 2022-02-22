@@ -102,8 +102,8 @@ bool CameraParam::init(ZedState& zed) {
     height = zed.camera.getCameraInformation().camera_resolution.height;
 
     // initialize image matrix
-    zed.image.alloc(width,height, sl::MAT_TYPE::U8_C4,  sl::MEM::GPU);
-    zed.depth.alloc(width,height, sl::MAT_TYPE::F32_C1, sl::MEM::GPU);
+    zed.image.alloc(width,height, sl::MAT_TYPE::U8_C4,  sl::MEM::CPU);
+    zed.depth.alloc(width,height, sl::MAT_TYPE::F32_C1, sl::MEM::CPU);
     if (width ==0 || height ==0 ){
         cerr << "camera width = 0 or height = 0. ZedParam cannot be created " << endl;
         return false;
@@ -142,8 +142,8 @@ bool ZedState::grab(const CameraParam& runParam) {
     }
 
     // update states
-    camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::GPU);
-    camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::GPU);
+    camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::CPU);
+    camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
     camera.retrieveObjects(humans,runParam.getObjRtParam());
     camera.getPosition(pose);
 

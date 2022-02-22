@@ -9,39 +9,37 @@ map<string,float> misc::ElapseMonitor::monitorResult = map<string,float>();
 
 namespace iswy{
 
-    void Camera::bindDevice() {
+    void Camera::bindHost() {
         try {
             uint row = zedParam.getCvSize().height;
             uint col = zedParam.getCvSize().width;
 
-            // zed - opencv gpu
-            deviceData.depthCv = zed_utils::slMat2cvMatGPU(zedState.depth); // bound buffer
-            deviceData.imageCv = zed_utils::slMat2cvMatGPU(zedState.image);
-            deviceData.bgDepthCv = cv::cuda::createContinuous(deviceData.depthCv.size(),
-                                                              CV_32FC1); // pixels of obj + human = NAN
-            deviceData.imageCv3ch = cv::cuda::createContinuous(zedParam.getCvSize(), CV_8UC3);
+            hostData.depthCv = zed_utils::slMat2cvMat(zedState.depth); // bound buffer
+            hostData.imageCv = zed_utils::slMat2cvMat(zedState.image);
+            hostData.bgDepthCv = cv::Mat(hostData.depthCv.size(), CV_32FC1); // pixels of obj + human = NAN
+            hostData.imageCv3ch = cv::Mat(zedParam.getCvSize(), CV_8UC3);
 
             // opencv gpu - open3d
-            deviceData.rgbBlob = std::make_shared<o3d_core::Blob>(
-                    deviceData.device_gpu, deviceData.imageCv3ch.cudaPtr(), nullptr);
-            deviceData.rgbTensor = o3d_core::Tensor({row, col, 3}, {3 * col, 3, 1},
-                                                    deviceData.rgbBlob->GetDataPtr(), deviceData.rgbType,
-                                                    deviceData.rgbBlob); // rgbTensor.IsContiguous() = true
-            deviceData.imageO3d = o3d_tensor::Image(deviceData.rgbTensor);
+            hostData.rgbBlob = std::make_shared<o3d_core::Blob>(
+                    hostData.device_cpu, hostData.imageCv3ch.data, nullptr);
+            hostData.rgbTensor = o3d_core::Tensor({row, col, 3}, {3 * col, 3, 1},
+                                                  hostData.rgbBlob->GetDataPtr(), hostData.rgbType,
+                                                  hostData.rgbBlob); // rgbTensor.IsContiguous() = true
+            hostData.imageO3d = o3d_tensor::Image(hostData.rgbTensor);
 
-            deviceData.depthBlob = std::make_shared<o3d_core::Blob>(
-                    deviceData.device_gpu, deviceData.depthCv.cudaPtr(), nullptr);
-            deviceData.depthTensor = o3d_core::Tensor({row, col, 1}, {col, 1, 1},
-                                                      deviceData.depthBlob->GetDataPtr(), deviceData.depthType,
-                                                      deviceData.depthBlob);
-            deviceData.depthO3d = o3d_tensor::Image(deviceData.depthTensor);
+            hostData.depthBlob = std::make_shared<o3d_core::Blob>(
+                    hostData.device_cpu, hostData.depthCv.data, nullptr);
+            hostData.depthTensor = o3d_core::Tensor({row, col, 1}, {col, 1, 1},
+                                                    hostData.depthBlob->GetDataPtr(), hostData.depthType,
+                                                    hostData.depthBlob);
+            hostData.depthO3d = o3d_tensor::Image(hostData.depthTensor);
 
             // print status
-            int rowCheck1 = deviceData.imageO3d.GetRows();
-            int colCheck1 = deviceData.imageO3d.GetCols();
-            int rowCheck2 = deviceData.depthO3d.GetRows();
-            int colCheck2 = deviceData.depthO3d.GetCols();
-            int imageChCheck = deviceData.imageO3d.GetChannels();
+            int rowCheck1 = hostData.imageO3d.GetRows();
+            int colCheck1 = hostData.imageO3d.GetCols();
+            int rowCheck2 = hostData.depthO3d.GetRows();
+            int colCheck2 = hostData.depthO3d.GetCols();
+            int imageChCheck = hostData.imageO3d.GetChannels();
 
             if ((rowCheck1 == rowCheck2) && (colCheck1 == colCheck2) && (rowCheck1 > 0) && (colCheck1 > 0)) {
                 printf("Binding success. camera image (r,c) = (%d, %d) with ch = %d \n",rowCheck1,colCheck1, imageChCheck);
@@ -56,6 +54,8 @@ namespace iswy{
         }
     }
 
+
+
     Camera::Camera(string configFile): zedParam(configFile){
         // open zed camera with initial parameter
         if (! zedParam.init(zedState)){
@@ -63,8 +63,8 @@ namespace iswy{
             return;
         }
 
-        // create gpu memory for opencv and open3d
-        bindDevice();
+        // create cpu memory for opencv and open3d
+        bindHost();
     }
 
     bool Camera::grab() {
@@ -73,7 +73,8 @@ namespace iswy{
             return false;
         }
         zedState.grab(zedParam);
-        cv::cuda::cvtColor(deviceData.imageCv, deviceData.imageCv3ch, cv::COLOR_BGRA2RGB);
+        cv::cvtColor(hostData.imageCv, hostData.imageCv3ch, cv::COLOR_BGRA2RGB);
+
         isGrab = true;
         return true;
     }
@@ -87,18 +88,18 @@ namespace iswy{
             cerr << "camera (rgb, depth, pose, actor) grab failed" << endl;
             return false;
         }
-        if (! detector.detect(camera.getImageCvCuda())){\
+        if (! detector.detect(camera.getImageCv())){
             return false;
         }
         return true;
     }
 
-    cv::cuda::GpuMat Camera::getImageCvCuda() const {
-        return deviceData.imageCv3ch.clone();
+    cv::Mat Camera::getImageCv() const {
+        return hostData.imageCv3ch.clone();
     }
 
     open3d::geometry::Image Camera::getImageO3d() const {
-        return deviceData.imageO3d.ToLegacy();
+        return hostData.imageO3d.ToLegacy();
 
     }
     open3d::geometry::Image SceneInterpreter::getImageO3d() const {
@@ -114,7 +115,7 @@ namespace iswy{
                 if (configRoot["weight"])
                     modelWeight = configRoot["weight"].as<string>();
                 if (configRoot["cfg"])
-                    modelConfig = configRoot["weight"].as<string>();
+                    modelConfig = configRoot["cfg"].as<string>();
                 if (configRoot["names"])
                     classNameDir = configRoot["names"].as<string>();
                 if (configRoot["confidence"])
@@ -148,12 +149,12 @@ namespace iswy{
         }
     }
 
-    bool ObjectDetector::detect(const cv::cuda::GpuMat& imageCv3ch) {
+    bool ObjectDetector::detect(const cv::Mat& imageCv3ch) {
         if (! paramDetect.isActive)
             return true;
         try {
             static cv::Mat blob, frame;
-            imageCv3ch.download(frame);
+            frame = imageCv3ch.clone();
             cv::dnn::blobFromImage(frame, blob, 1.0,
                                    {608, 608}, // TODO
                                    cv::Scalar(), true, false);

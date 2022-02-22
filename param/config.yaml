@@ -6,7 +6,7 @@ tsdf: # volumetric meshing
   block_count: 1000
 objects:
   active: true
-  weight: C:\Users\JBS\OneDrive\Documents\GitHub\see_with_you\param\yolov4.weights
-  cfg: C:\Users\JBS\OneDrive\Documents\GitHub\see_with_you\param\config.yaml
-  names: C:\Users\JBS\OneDrive\Documents\GitHub\see_with_you\param\coco.names
+  weight: C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/param/yolov4.weights
+  cfg: C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/param/yolov4.cfg
+  names: C:/Users/JBS/OneDrive/Documents/GitHub/see_with_you/param/coco.names
   confidence: 0.2

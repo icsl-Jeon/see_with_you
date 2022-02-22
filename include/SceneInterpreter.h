@@ -66,7 +66,7 @@ namespace iswy { // i see with you
     //               Managing sensor data                    //
     //////////////////////////////////////////////////////////
 
-    /// \brief Shared resource for extracting sensing information
+    /// \brief Shared resource for extracting sensing information (deprecated)
     struct DeviceData{
 
         DeviceData() = default;
@@ -96,21 +96,43 @@ namespace iswy { // i see with you
         o3d_tensor::TSDFVoxelGrid* volumePtr;
     };
 
+    struct HostData{
+        o3d_core::Device device_cpu = o3d_core::Device("CPU:0");
+        o3d_core::Dtype rgbType = o3d_core::Dtype::UInt8;
+        o3d_core::Dtype depthType = o3d_core::Dtype::Float32;
+
+        cv::Mat imageCv3ch;
+        cv::Mat depthCv;
+        cv::Mat fgMask; // {human, objects} = 255
+        cv::Mat imageCv;
+        cv::Mat bgDepthCv; // depth - {human, objects}
+
+        shared_ptr<o3d_core::Blob> rgbBlob;
+        shared_ptr<o3d_core::Blob> depthBlob;
+        o3d_core::Tensor rgbTensor ;
+        o3d_core::Tensor depthTensor ;
+        o3d_tensor::Image imageO3d;
+        o3d_tensor::Image depthO3d;
+
+    };
+
     /// \brief  Raw camera sensing data and its data in gpu
     struct Camera{
     private:
         bool isBound = false;
         bool isGrab = false;
         DeviceData deviceData; /// Raw data in gpu
+        HostData hostData; /// Raw data in cpu
         // Core sensing data. They should be bound each other for shallow copy
         zed_utils::CameraParam zedParam;
         zed_utils::ZedState zedState; /// sensor raw data
         void bindDevice(); /// binding between sl objects - cv objects - open3d objects in gpu memory
+        void bindHost();  /// binding between sl objects - cv objects - open3d objects in cpu memory
 
     public:
         Camera(string configFile); /// open camera with config file
         open3d::geometry::Image getImageO3d() const;
-        cv::cuda::GpuMat getImageCvCuda() const;
+        cv::Mat getImageCv() const;
         bool grab(); /// update device data with incoming sensor
     };
 
@@ -118,7 +140,7 @@ namespace iswy { // i see with you
     struct ObjectDetector{
         param::ObjectDetectParam paramDetect;
         cv::dnn::Net net;
-        bool detect(const cv::cuda::GpuMat& imageCv3ch);
+        bool detect(const cv::Mat& imageCv3ch);
         ObjectDetector(string configFile);
     };
 
