@@ -93,7 +93,7 @@ namespace iswy { // i see with you
         o3d_tensor::Image depthO3d;
 
         // open3d volumetric TSDF
-        o3d_tensor::TSDFVoxelGrid* volumePtr;
+        o3d_tensor::VoxelBlockGrid* volumePtr; // TODO: new open3d master doesn' have TSDFVoxelGrid.h
     };
 
     struct HostData{
@@ -133,7 +133,10 @@ namespace iswy { // i see with you
         Camera(string configFile); /// open camera with config file
         open3d::geometry::Image getImageO3d() const;
         cv::Mat getImageCv() const;
+        sl::ObjectData getHumanZed() const;
+
         bool grab(); /// update device data with incoming sensor
+
     };
 
     /// \brief Detect various objects in image and find their pixels and locations (not actor)
@@ -261,8 +264,13 @@ namespace iswy { // i see with you
         /// \brief update perception
         bool grab();
 
+
         /// \brief get the latest image in open3d legacy format
         open3d::geometry::Image getImageO3d() const;
+        open3d::geometry::LineSet getSkeletonO3d() const;
+
+        void disableObjectDetection();
+        void enableObjectDetection();
 
     };
 

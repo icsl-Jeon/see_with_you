@@ -7,9 +7,7 @@
 
 namespace  misc {
 
-    #ifndef ZED_OPEN3D_MISC_H
     map<string,float> ElapseMonitor::monitorResult = map<string,float>(); // this should be linked see (http://bitboom.github.io/cpp-static-member-initialization)
-    #endif
 
     ElapseMonitor::~ElapseMonitor(){
         elapseMeasured = timerPtr->stop();

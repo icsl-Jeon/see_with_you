@@ -45,6 +45,7 @@ CameraParam::CameraParam(string parameterFilePath) {
     detectionParameters->detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
     detectionParameters->enable_tracking = true;
     detectionParameters->enable_body_fitting = true;
+    detectionParameters->body_format = sl::BODY_FORMAT::POSE_34;
     detectionParameters->enable_mask_output = true;
 
     runtimeParameters->confidence_threshold = 50;

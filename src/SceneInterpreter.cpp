@@ -5,7 +5,6 @@
 #include <SceneInterpreter.h>
 
 
-map<string,float> misc::ElapseMonitor::monitorResult = map<string,float>();
 
 namespace iswy{
 
@@ -169,6 +168,21 @@ namespace iswy{
             cerr << "Exception at object detection " << e.what();
             return false;
         }
+    }
+
+    void SceneInterpreter::disableObjectDetection() {
+        detector.paramDetect.isActive = false;
+    }
+
+    void SceneInterpreter::enableObjectDetection() {
+        detector.paramDetect.isActive = true;
+    }
+
+    open3d::geometry::LineSet SceneInterpreter::getSkeletonO3d() const {
+        sl::ObjectData human = camera.getHumanZed();
+        open3d::geometry::LineSet skeleton;
+        o3d_utils::fromSlObjects(human, skeleton );
+        return skeleton;
     }
 
 

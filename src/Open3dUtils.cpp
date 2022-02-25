@@ -36,6 +36,10 @@ void o3d_utils::fromSlPoints(const sl::Mat &slPoints, open3d::geometry::PointClo
     std::cout << "points size = " << o3dPoints.points_.size() << std::endl;
 }
 
+/// \brief Compute drawable objects to represent the zed actor
+/// \param object
+/// \param lineSet skeleton
+/// \param attentionPointSet eyes / hands
 void o3d_utils::fromSlObjects(const sl::ObjectData &object,
                               std::shared_ptr<open3d::geometry::LineSet>  lineSet,
                               std::shared_ptr<open3d::geometry::TriangleMesh> attentionPointSet[4]
@@ -77,7 +81,7 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
             index ++;
         }
 
-        for (auto &limb : o3d_utils::SKELETON_BONES) {
+        for (auto &limb : sl::BODY_BONES_POSE_34) {
             int idx1 = getIdx(limb.first);
             int idx2 = getIdx(limb.second);
             sl::float3 kp_1 = object.keypoint[idx1];
@@ -86,6 +90,9 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
             if (std::isfinite(kp_1.norm()) && std::isfinite(kp_2.norm()))
                 lineSet->lines_.emplace_back(Eigen::Vector2i(idx1, idx2));
         }
+
+
+
     }
 
     /**

@@ -29,6 +29,7 @@ TEST_F(CameraThread, SVO_OPEN) {
 
 // Run zed camera for rgb + depth and inspect open3d image to check binding
 TEST_F(CameraThread, RUN_CAM) {
+    scenePtr->disableObjectDetection();
     try {
         auto  imageO3dPtr = make_shared<open3d::geometry::Image>();
         open3d::visualization::Visualizer vis;
@@ -91,6 +92,57 @@ TEST_F(CameraThread, OBJECTS_DETECT) {
     }
 }
 
+// Rigging skeletal bones
+TEST_F(CameraThread, RIGGING) {
+    namespace o3d_legacy = open3d::geometry;
+    namespace o3d_core = open3d::core;
+    namespace o3d_vis = open3d::visualization;
+
+    scenePtr->disableObjectDetection(); // don't need object detection. We only test actor.
+    try {
+        cout << "Camera open success !" << endl;
+        cout << "Running camera thread for 20 s...." << endl;
+
+        open3d::visualization::Visualizer vis;
+        vis.CreateVisualizerWindow("Rigging",720,404);
+        std::shared_ptr<o3d_legacy::LineSet> skeletonO3dPtr =
+                std::make_shared<o3d_legacy::LineSet>() ; // object skeleton
+        bool isVisInit = false;
+        vis.GetRenderOption().ChangeLineWidth(1.0);
+
+        auto timer = misc::Timer();
+        int cnt = 0;
+        while (timer.stop() < 20 * 1E+3){
+
+                if (!scenePtr->grab())
+                    FAIL();
+
+                // if success, visualize
+                *skeletonO3dPtr = scenePtr->getSkeletonO3d();
+
+                if (! isVisInit) {
+                    vis.AddGeometry(skeletonO3dPtr);
+                    isVisInit = true;
+                } else {
+                    vis.UpdateGeometry();
+                    vis.PollEvents();
+                    vis.UpdateRender();
+                }
+
+            sl::sleep_ms(1);
+        }
+
+
+
+
+
+
+    }catch (std::exception const & err) {
+        FAIL() << err.what();
+    }
+
+
+}
 
 
 int main(int argc, char** argv) {

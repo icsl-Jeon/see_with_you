@@ -6,14 +6,22 @@ Due to ZED SDK, Windows 10 cannot build this library in Debug. The possible buil
 If we want to debug our library, we have to build this in RelWithDebInfo. The regarding issue is well explained [here](https://github.com/google/googletest/tree/main/googletest#incorporating-into-an-existing-cmake-project) also.
 
 ### Dependencies (build and install the belows)
+* ZED SDK 3.6.5: This installs its own dependencies and registers them into `PATH`. 
+```
+C:\Program Files (x86)\ZED SDK\dependencies\freeglut_2.8\x64
+C:\Program Files (x86)\ZED SDK\dependencies\glew-1.12.0\x64
+C:\Program Files (x86)\ZED SDK\dependencies\opencv_3.1.0\x64
+```
+Thus, we have to ensure the version conflicts.  
 * CUDA 11.3 
-* OPENCV 4.5.4
+* OPENCV 4.5.4: We have to provide directory including `OpenCVConfig.cmake` and `OpenCVConfig-version` toward `PATH`. This was `C:\Users\junbs\OneDrive\Documents\window_dev\opencv\build` for my case. 
+Ensure to build CUDA_MODULES.
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp): This should be built in RelWithDebInfo to cater both Release and RelWithDebInfo. 
 Found that if this is built in Debug, this `LoadFile` function works only when in Debug mode, which is **not possible** for our case. Ensure to turn on `BUILD_SHARED_LIBS=TRUE`
 Do not forget to include PATH variables: `C:\Program Files (x86)\YAML_CPP\bin` (for dynamic linking).
 * [google-test](https://github.com/google/googletest/): We accept the recommendation of developers of Google. Download the master and put it in `./googletest`.  
-* [Open3d](https://github.com/icsl-Jeon/Open3D): I modified some code. For Windows, this was built in RelWithDebInfo and installed into 'C:\Program Files (x86)\Open3D'. 
-Add `C:\Program Files (x86)\Open3D` into `PATH` variable. 
+* [Open3d](https://github.com/icsl-Jeon/Open3D):  For Windows, this was built in RelWithDebInfo and installed into 'C:\Program Files (x86)\Open3D'. 
+Add `C:\Program Files (x86)\Open3D` into `PATH` variable. I use version 0.15.1 and it has no error regarding [tbb_static](https://github.com/icsl-Jeon/window_dev#open3d-tbb_staticlib-issues). I could run code out-of-the-box.
 
 ## Executables 
 Recommend run in Release mode. RelWithDebInfo seems to stop with an unknown issue. 
