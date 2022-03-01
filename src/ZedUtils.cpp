@@ -15,6 +15,14 @@ CameraParam::CameraParam(string parameterFilePath) {
     objectDetectionRuntimeParameters = new sl::ObjectDetectionRuntimeParameters;
     positionalTrackingParameters = new sl::PositionalTrackingParameters;
 
+    // todo
+    initParameters->coordinate_units = sl::UNIT::METER;
+    initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
+    initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
+    initParameters->camera_resolution = sl::RESOLUTION::HD1080;
+//    initParameters->depth_maximum_distance = 7.0;
+//    initParameters->depth_minimum_distance = 0.1;
+
     // parameter parsing
     try{
         YAML::Node config = YAML::LoadFile(parameterFilePath);
@@ -35,22 +43,15 @@ CameraParam::CameraParam(string parameterFilePath) {
         cerr << "error when opening yaml config" << endl;
     }
 
-    // todo
-    initParameters->coordinate_units = sl::UNIT::METER;
-    initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
-    initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
-//    initParameters->depth_maximum_distance = 7.0;
-//    initParameters->depth_minimum_distance = 0.1;
-
     detectionParameters->detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
     detectionParameters->enable_tracking = true;
-    detectionParameters->enable_body_fitting = true;
-    detectionParameters->body_format = sl::BODY_FORMAT::POSE_18;
-    detectionParameters->enable_mask_output = true;
+    detectionParameters->enable_body_fitting = false;
+    detectionParameters->body_format = sl::BODY_FORMAT::POSE_34;
+    detectionParameters->enable_mask_output = false;
 
     positionalTrackingParameters->enable_area_memory = true;
 
-    objectDetectionRuntimeParameters->detection_confidence_threshold = 10;
+    objectDetectionRuntimeParameters->detection_confidence_threshold = 40;
 }
 
 Eigen::Matrix3d CameraParam::getCameraMatrix() const {
@@ -66,6 +67,28 @@ Eigen::Matrix3d CameraParam::getCameraMatrix() const {
 
 
 bool CameraParam::init(ZedState& zed) {
+
+
+//    InitParameters init_parameters;
+//    init_parameters.camera_resolution = RESOLUTION::HD1080;
+//    // On Jetson the object detection combined with an heavy depth mode could reduce the frame rate too much
+//    init_parameters.depth_mode = DEPTH_MODE::ULTRA;
+//    init_parameters.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
+//    init_parameters.input.setFromSVOFile("C:/Users/JBS/OneDrive/Documents/ZED/HD1080_SN28007858_14-25-48.svo");
+//    init_parameters.coordinate_units = sl::UNIT::METER;
+//    auto returned_state = zed.camera.open(init_parameters);
+//    if (returned_state != ERROR_CODE::SUCCESS) {
+//        zed.camera.close();
+//    }
+//
+//    PositionalTrackingParameters positional_tracking_parameters;
+//
+//    returned_state = zed.camera.enablePositionalTracking(positional_tracking_parameters);
+//    if (returned_state != ERROR_CODE::SUCCESS) {
+//        zed.camera.close();
+//    }
+
+
 
     // open camera
     auto returned_state = zed.camera.open(*initParameters);
@@ -83,7 +106,7 @@ bool CameraParam::init(ZedState& zed) {
     }
 
 
-    returned_state = zed.camera.enableObjectDetection(detectionParameters);
+    returned_state = zed.camera.enableObjectDetection(*detectionParameters);
     if(returned_state != sl::ERROR_CODE::SUCCESS) {
         printf("Enabling object detection failed: \n");
         zed.camera.close();

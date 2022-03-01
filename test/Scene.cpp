@@ -143,6 +143,8 @@ TEST_F(CameraThread, RIGGING) {
 }
 
 
+
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc,argv);
     if (argc > 1){
