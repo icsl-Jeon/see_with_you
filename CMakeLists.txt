@@ -20,7 +20,7 @@ ENDIF()
 find_package(glm REQUIRED)
 
 # ZED
-find_package(ZED 3 REQUIRED)
+find_package(ZED 3.7 REQUIRED)
 include_directories(${ZED_INCLUDE_DIRS})
 link_directories(${ZED_LIBRARY_DIR})
 

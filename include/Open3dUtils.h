@@ -18,8 +18,7 @@ namespace o3d_utils {
     void fromCvMat(const cv::Mat& cvImage, open3d::geometry::Image& o3dImage );
     void fromSlPoints(const sl::Mat& slPoints, open3d::geometry::PointCloud& o3dPoints );
     void fromSlObjects(const sl::ObjectData& object,
-                       std::shared_ptr<open3d::geometry::LineSet> lineSet,
-                       std::shared_ptr<open3d::geometry::TriangleMesh> attentionPointSet[4]
+                       open3d::geometry::LineSet& skeletonLineSet
                        );
     void initViewport(open3d::visualization::Visualizer& vis); // todo parameterized
     void registerGeometrySet(open3d::visualization::Visualizer& vis,

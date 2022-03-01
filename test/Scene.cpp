@@ -119,22 +119,20 @@ TEST_F(CameraThread, RIGGING) {
 
                 // if success, visualize
                 *skeletonO3dPtr = scenePtr->getSkeletonO3d();
-
-                if (! isVisInit) {
-                    vis.AddGeometry(skeletonO3dPtr);
-                    isVisInit = true;
-                } else {
-                    vis.UpdateGeometry();
-                    vis.PollEvents();
-                    vis.UpdateRender();
-                }
+                if (! skeletonO3dPtr->IsEmpty())
+                    if (! isVisInit) {
+                        vis.AddGeometry(skeletonO3dPtr);
+                        isVisInit = true;
+                    } else {
+                        vis.UpdateGeometry();
+                        vis.PollEvents();
+                        vis.UpdateRender();
+                    }
+                else
+                    cout<<"still no actor identified" << endl;
 
             sl::sleep_ms(1);
         }
-
-
-
-
 
 
     }catch (std::exception const & err) {

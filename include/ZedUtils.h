@@ -28,7 +28,6 @@ namespace zed_utils {
 
     bool parseArgs(int argc, char **argv, sl::InitParameters &param);
 
-    bool initCamera(sl::Camera &zed, sl::InitParameters initParameters);
 
     cv::Mat slMat2cvMat(sl::Mat &input);
 

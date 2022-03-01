@@ -73,6 +73,8 @@ namespace iswy{
         }
         zedState.grab(zedParam);
         cv::cvtColor(hostData.imageCv, hostData.imageCv3ch, cv::COLOR_BGRA2RGB);
+        cv::imshow("rgb", hostData.imageCv);
+        cv::waitKey(1);
 
         isGrab = true;
         return true;
@@ -178,11 +180,15 @@ namespace iswy{
         detector.paramDetect.isActive = true;
     }
 
+    sl::ObjectData Camera::getHumanZed() const {
+        return zedState.actor;
+    }
+
     open3d::geometry::LineSet SceneInterpreter::getSkeletonO3d() const {
         sl::ObjectData human = camera.getHumanZed();
-        open3d::geometry::LineSet skeleton;
-        o3d_utils::fromSlObjects(human, skeleton );
-        return skeleton;
+        open3d::geometry::LineSet skeletonLineSet  ;
+        o3d_utils::fromSlObjects(human, skeletonLineSet);
+        return skeletonLineSet;
     }
 
 

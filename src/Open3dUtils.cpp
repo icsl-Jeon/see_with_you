@@ -38,16 +38,14 @@ void o3d_utils::fromSlPoints(const sl::Mat &slPoints, open3d::geometry::PointClo
 
 /// \brief Compute drawable objects to represent the zed actor
 /// \param object
-/// \param lineSet skeleton
-/// \param attentionPointSet eyes / hands
+/// \param skeletonLineSet skeleton output
 void o3d_utils::fromSlObjects(const sl::ObjectData &object,
-                              std::shared_ptr<open3d::geometry::LineSet>  lineSet,
-                              std::shared_ptr<open3d::geometry::TriangleMesh> attentionPointSet[4]
+                              open3d::geometry::LineSet&  skeletonLineSet
                               ) {
 
-    lineSet->colors_.clear();
-    lineSet->points_.clear();
-    lineSet->lines_.clear();
+    skeletonLineSet.colors_.clear();
+    skeletonLineSet.points_.clear();
+    skeletonLineSet.lines_.clear();
 
     if (!object.keypoint.empty()) {
 
@@ -63,21 +61,21 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
                 // even though a points is not assigned to any line
                 keyPnt = Eigen::Vector3d(0,0,0);
             }else{
-
+                /**
                 if (static_cast<BODY_PARTS>(index) == sl::BODY_PARTS::LEFT_EYE)
-                    attentionPointSet[0]->Translate(keyPnt,false);
+                    attentionPointSet[0].Translate(keyPnt,false);
 
                 if (static_cast<BODY_PARTS>(index) == sl::BODY_PARTS::RIGHT_EYE)
-                    attentionPointSet[1]->Translate(keyPnt,false);
+                    attentionPointSet[1].Translate(keyPnt,false);
 
                 if (static_cast<BODY_PARTS>(index) == sl::BODY_PARTS::LEFT_WRIST)
-                    attentionPointSet[2]->Translate(keyPnt,false);
+                    attentionPointSet[2].Translate(keyPnt,false);
 
                 if (static_cast<BODY_PARTS>(index) == sl::BODY_PARTS::RIGHT_WRIST)
-                    attentionPointSet[3]->Translate(keyPnt,false);
-
+                    attentionPointSet[3].Translate(keyPnt,false);
+                **/
             }
-            lineSet->points_.emplace_back(keyPnt);
+            skeletonLineSet.points_.emplace_back(keyPnt);
             index ++;
         }
 
@@ -88,7 +86,7 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
             sl::float3 kp_2 = object.keypoint[idx2];
             // draw line between two keypoints
             if (std::isfinite(kp_1.norm()) && std::isfinite(kp_2.norm()))
-                lineSet->lines_.emplace_back(Eigen::Vector2i(idx1, idx2));
+                skeletonLineSet.lines_.emplace_back(Eigen::Vector2i(idx1, idx2));
         }
 
 
@@ -97,9 +95,9 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
 
     /**
     printf("--------------------------------\n");
-    for (auto line : lineSet.lines_) {
-        int idx1 = line(0); auto pnt1 = lineSet.points_[idx1];
-        int idx2 = line(1); auto pnt2 = lineSet.points_[idx2];
+    for (auto line : skeletonLineSet.lines_) {
+        int idx1 = line(0); auto pnt1 = skeletonLineSet.points_[idx1];
+        int idx2 = line(1); auto pnt2 = skeletonLineSet.points_[idx2];
         printf("(%.3f, %.3f, %.3f) -  (%.3f, %.3f, %.3f) \n ",
                pnt1.x(), pnt1.y(), pnt1.z(),
                pnt2.x(), pnt2.y(), pnt2.z());
@@ -109,7 +107,7 @@ void o3d_utils::fromSlObjects(const sl::ObjectData &object,
     float g = 143.0 / 255.0;
     float b = 247.0 / 255.0;
 
-    lineSet->PaintUniformColor(Eigen::Vector3d(r,g,b));
+    skeletonLineSet.PaintUniformColor(Eigen::Vector3d(r, g, b));
 }
 
 

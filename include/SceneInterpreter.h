@@ -131,9 +131,10 @@ namespace iswy { // i see with you
 
     public:
         Camera(string configFile); /// open camera with config file
+
         open3d::geometry::Image getImageO3d() const;
-        cv::Mat getImageCv() const;
-        sl::ObjectData getHumanZed() const;
+        cv::Mat getImageCv() const; /// returns the latest RGB image
+        sl::ObjectData getHumanZed() const; /// sl::Object returned
 
         bool grab(); /// update device data with incoming sensor
 

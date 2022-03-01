@@ -39,17 +39,18 @@ CameraParam::CameraParam(string parameterFilePath) {
     initParameters->coordinate_units = sl::UNIT::METER;
     initParameters->coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
     initParameters->depth_mode = sl::DEPTH_MODE::ULTRA;
-    initParameters->depth_maximum_distance = 7.0;
-    initParameters->depth_minimum_distance = 0.1;
+//    initParameters->depth_maximum_distance = 7.0;
+//    initParameters->depth_minimum_distance = 0.1;
 
     detectionParameters->detection_model = sl::DETECTION_MODEL::HUMAN_BODY_FAST;
     detectionParameters->enable_tracking = true;
     detectionParameters->enable_body_fitting = true;
-    detectionParameters->body_format = sl::BODY_FORMAT::POSE_34;
+    detectionParameters->body_format = sl::BODY_FORMAT::POSE_18;
     detectionParameters->enable_mask_output = true;
 
-    runtimeParameters->confidence_threshold = 50;
     positionalTrackingParameters->enable_area_memory = true;
+
+    objectDetectionRuntimeParameters->detection_confidence_threshold = 10;
 }
 
 Eigen::Matrix3d CameraParam::getCameraMatrix() const {
@@ -73,12 +74,14 @@ bool CameraParam::init(ZedState& zed) {
         return false;
     }
 
-    returned_state = zed.camera.enablePositionalTracking();
+
+    returned_state = zed.camera.enablePositionalTracking(*positionalTrackingParameters);
     if(returned_state != sl::ERROR_CODE::SUCCESS) {
-        printf("Enabling positional tracking failed: \n");
+        printf("Enabling position tracking failed: \n");
         zed.camera.close();
         return false;
     }
+
 
     returned_state = zed.camera.enableObjectDetection(detectionParameters);
     if(returned_state != sl::ERROR_CODE::SUCCESS) {
@@ -87,12 +90,6 @@ bool CameraParam::init(ZedState& zed) {
         return false;
     }
 
-    returned_state = zed.camera.enablePositionalTracking(*positionalTrackingParameters);
-    if(returned_state != sl::ERROR_CODE::SUCCESS) {
-        printf("Enabling position tracking failed: \n");
-        zed.camera.close();
-        return false;
-    }
 
     sl::CameraConfiguration intrinsicParam = zed.camera.getCameraInformation().camera_configuration;
     fx = intrinsicParam.calibration_parameters.left_cam.fx;
@@ -130,10 +127,9 @@ bool ZedState::grab(const CameraParam& runParam) {
 //    misc::ElapseMonitor monitor("Grab {rgb,depth,object}");
 
     bool isOk;
-    auto rtParam = runParam.getRtParam();
-    if (camera.grab(rtParam) == sl::ERROR_CODE::SUCCESS) {
+    if (camera.grab() == sl::ERROR_CODE::SUCCESS) {
         isOk = true;
-    } else if (camera.grab(rtParam) == sl::ERROR_CODE::END_OF_SVOFILE_REACHED) {
+    } else if (camera.grab() == sl::ERROR_CODE::END_OF_SVOFILE_REACHED) {
         printf("SVO reached end. Replay. \n");
         camera.setSVOPosition(1);
         isOk = true;
@@ -143,13 +139,16 @@ bool ZedState::grab(const CameraParam& runParam) {
     }
 
     // update states
+    auto objRtParam = runParam.getObjRtParam();
+    camera.retrieveObjects(humans,objRtParam);
     camera.retrieveImage(image,sl::VIEW::LEFT,sl::MEM::CPU);
     camera.retrieveMeasure(depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
-    camera.retrieveObjects(humans,runParam.getObjRtParam());
     camera.getPosition(pose);
 
     if (! humans.object_list.empty())
         actor = humans.object_list[0];
+    else
+        cout << "objects were not retrieved from ZED" << endl;
 
     return isOk;
 }
@@ -227,49 +226,6 @@ bool zed_utils::parseArgs(int argc, char **argv,sl::InitParameters& param)
         doRecord = true;
     }
     return doRecord;
-}
-
-bool zed_utils::initCamera(sl::Camera &zed, sl::InitParameters initParameters) { // will be deprecated
-
-
-    // Parameter setting
-    initParameters.coordinate_units = sl::UNIT::METER;
-    initParameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
-    initParameters.depth_mode = sl::DEPTH_MODE::QUALITY;
-    initParameters.depth_maximum_distance = 10.0;
-    initParameters.depth_minimum_distance = 0.02;
-
-    /**
-    sl::ObjectDetectionParameters detectionParameters;
-    detectionParameters.detection_model = sl::DETECTION_MODEL::HUMAN_BODY_MEDIUM;
-    detectionParameters.enable_tracking = true;
-    detectionParameters.enable_body_fitting = true;
-    detectionParameters.enable_mask_output = true;
-    **/
-
-    // Enabling functions
-    auto returned_state = zed.open(initParameters);
-    if (returned_state != sl::ERROR_CODE::SUCCESS) {
-        printf("Enabling positional tracking failed: \n");
-        return false;
-    }
-    returned_state = zed.enablePositionalTracking();
-    if(returned_state != sl::ERROR_CODE::SUCCESS) {
-        printf("Enabling positional tracking failed: \n");
-        zed.close();
-        return false;
-    }
-
-    /**
-    returned_state = zed.enableObjectDetection(detectionParameters);
-    if(returned_state != sl::ERROR_CODE::SUCCESS) {
-        printf("Enabling object detection failed: \n");
-        zed.close();
-        return false;
-    }
-    **/
-
-    return true;
 }
 
 // Mapping between MAT_TYPE and CV_TYPE
